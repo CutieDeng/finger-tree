@@ -165,10 +165,9 @@ pub fn merge(e: *Element, buffer: []Element, use_first: bool, left: Element, rig
             remain = try allocSingle(remain, use_first, &new[0]); 
             remain = try allocSingle(remain, use_first, &new[1]); 
             remain = try allocSingle(remain, use_first, &new[2]); 
+
             var idx: usize = 0; 
-
             const limits = [_] usize { 2, if (len == 8) 3 else 2, 3 }; 
-
             var now: usize = 0; 
             for (0..lrfourlen) |li| {
                 new[now].Three.content[idx] = lrfour.Four[li];  
@@ -198,7 +197,21 @@ pub fn merge(e: *Element, buffer: []Element, use_first: bool, left: Element, rig
             threeFlushSize(new[0], depth); 
             threeFlushSize(new[1], depth); 
             threeFlushSize(new[2], depth); 
-            unreachable; 
+            var left_deep_finger: [3]*Element = undefined; 
+            remain = try allocSingle(remain, use_first, &left_deep_finger[0]); 
+            remain = try allocSingle(remain, use_first, &left_deep_finger[1]); 
+            remain = try allocSingle(remain, use_first, &left_deep_finger[2]); 
+            remain = try push(left_deep_finger[0], remain, use_first, left_deep_fingertree.*, @intFromPtr(new[0]), depth + 1, true); 
+            remain = try push(left_deep_finger[1], remain, use_first, left_deep_finger[0].*, @intFromPtr(new[0]), depth + 1, true); 
+            remain = try push(left_deep_finger[2], remain, use_first, left_deep_finger[1].*, @intFromPtr(new[0]), depth + 1, true); 
+            var new_deep: *Element = undefined; 
+            remain = try allocSingle(remain, use_first, &new_deep); 
+            new_deep.Deep.finger_tree = @intFromPtr(left_deep_finger[2]); 
+            new_deep.Deep.left = ldeep.Deep.left; 
+            new_deep.Deep.right = rdeep.Deep.right; 
+            e.FingerTree.ptr = @intFromPtr(new_deep); 
+            e.FingerTree.t = Element.DeepT; 
+            e.FingerTree.size = deepFlushSize(new_deep, depth); 
         }, 
         else => unreachable, 
     }
