@@ -45,15 +45,12 @@ pub fn single(e: *Element, value: usize, depth: usize) void {
         .FingerTree = .{ 
             .t = 1, 
             .ptr = value, 
-            .size = if (depth == 0) 1 else 
-                @as(*Element, @ptrFromInt(value)).Three.size,
+            .size = maybeThreeCalcSize(value, depth), 
         }
     }; 
 }
 
 pub fn merge(e: *Element, buffer: []Element, use_first: bool, left: Element, right: Element, depth: usize) ![]Element {
-    _ = depth; // autofix
-    _ = use_first; // autofix
     // Handle empty situation 
     if (left.FingerTree.t == Element.EmptyT) {
         e.* = right;  
@@ -63,7 +60,134 @@ pub fn merge(e: *Element, buffer: []Element, use_first: bool, left: Element, rig
         e.* = left; 
         return buffer;
     }
-    
+    if (left.FingerTree.t == Element.SingleT) {
+        return push(e, buffer, use_first, right, left.FingerTree.ptr, depth, false); 
+    } 
+    if (right.FingerTree.t == Element.SingleT) {
+        return push(e, buffer, use_first, left, right.FingerTree.ptr, depth, true); 
+    }
+    const ldeep : *Element = @ptrFromInt(left.FingerTree.ptr); 
+    const rdeep : *Element = @ptrFromInt(right.FingerTree.ptr); 
+    const lrfour : *Element = @ptrFromInt(ldeep.Deep.right); 
+    const rlfour : *Element = @ptrFromInt(rdeep.Deep.left); 
+    const lrfourlen = fourLength(lrfour); 
+    const rlfourlen = fourLength(rlfour); 
+    const len = lrfourlen + rlfourlen; 
+    var remain = buffer; 
+    std.debug.assert(len >= 2 and len <= 8); 
+    switch (len) {
+        2, 3 => {
+            var new: *Element = undefined; 
+            remain = try allocSingle(remain, use_first, &new); 
+            var idx: usize = 0; 
+            for (0..lrfourlen) |li| {
+                new.Three.content[idx] = lrfour.Four[li]; 
+                idx += 1; 
+            }
+            for (0..rlfourlen) |ri| {
+                new.Three.content[idx] = rlfour.Four[ri]; 
+                idx += 1; 
+            }
+            if (idx == 2) {
+                new.Three.content[idx] = 0; 
+            }
+            threeFlushSize(new, depth); 
+            var left2: *Element = undefined; 
+            remain = try allocSingle(remain, use_first, &left2); 
+            const left_deep_fingertree: *Element = @ptrFromInt(ldeep.Deep.finger_tree); 
+            remain = try push(left2, remain, use_first, left_deep_fingertree.*, @intFromPtr(new), depth + 1, true); 
+            var new_deep_fingertree: *Element = undefined; 
+            remain = try allocSingle(remain, use_first, &new_deep_fingertree); 
+            const rdeep_inner : *Element = @ptrFromInt(rdeep.FingerTree.ptr); 
+            remain = try merge(new_deep_fingertree, remain, use_first, left_deep_fingertree.*, rdeep_inner.*, depth + 1); 
+            var new_deep: *Element = undefined; 
+            remain = try allocSingle(remain, use_first, &new_deep); 
+            new_deep.Deep.finger_tree = @intFromPtr(new_deep_fingertree); 
+            new_deep.Deep.left = ldeep.Deep.left; 
+            new_deep.Deep.right = rdeep.Deep.right; 
+            e.FingerTree.ptr = @intFromPtr(new_deep); 
+            e.FingerTree.t = Element.DeepT; 
+            e.FingerTree.size = deepFlushSize(new_deep, depth); 
+        }, 
+        4, 5, 6 => {
+            var new: [2]*Element = undefined; 
+            remain = try allocSingle(remain, use_first, &new[0]); 
+            remain = try allocSingle(remain, use_first, &new[1]); 
+            var idx: usize = 0; 
+            const first_len: usize = if (len == 4) 2 else 3; 
+            var now: usize = 0; 
+            for (0..lrfourlen) |li| {
+                new[now].Three.content[idx] = lrfour.Four[li];  
+                idx += 1; 
+                if (idx == first_len) {
+                    if (first_len == 2) {
+                        new[now].Three.content[idx] = 0; 
+                    }
+                    idx = 0; 
+                    now += 1; 
+                }
+            }
+            for (0..rlfourlen) |ri| {
+                new[now].Three.content[idx] = rlfour.Four[ri]; 
+                idx += 1; 
+                if (idx == first_len) {
+                    if (first_len == 2) {
+                        new[now].Three.content[idx] = 0; 
+                    }
+                    idx = 0; 
+                    now += 1; 
+                }
+            }
+            if (idx == 2) {
+                new[now].Three.content[idx] = 0; 
+            }
+            threeFlushSize(new[0], depth); 
+            threeFlushSize(new[1], depth); 
+            unreachable; 
+        }, 
+        7, 8 => {
+            var new: [3]*Element = undefined;  
+            remain = try allocSingle(remain, use_first, &new[0]); 
+            remain = try allocSingle(remain, use_first, &new[1]); 
+            remain = try allocSingle(remain, use_first, &new[2]); 
+            var idx: usize = 0; 
+
+            const limits = [_] usize { 2, if (len == 8) 3 else 2, 3 }; 
+
+            var now: usize = 0; 
+            for (0..lrfourlen) |li| {
+                new[now].Three.content[idx] = lrfour.Four[li];  
+                idx += 1; 
+                if (idx == limits[now]) {
+                    if (idx == 2) {
+                        new[now].Three.content[idx] = 0; 
+                    }
+                    idx = 0; 
+                    now += 1; 
+                }
+            }
+            for (0..rlfourlen) |ri| {
+                new[now].Three.content[idx] = rlfour.Four[ri]; 
+                idx += 1; 
+                if (idx == limits[now]) {
+                    if (idx == 2) {
+                        new[now].Three.content[idx] = 0; 
+                    }
+                    idx = 0; 
+                    now += 1; 
+                }
+            }
+            if (idx == 2) {
+                new[now].Three.content[idx] = 0; 
+            }
+            threeFlushSize(new[0], depth); 
+            threeFlushSize(new[1], depth); 
+            threeFlushSize(new[2], depth); 
+            unreachable; 
+        }, 
+        else => unreachable, 
+    }
+    return remain; 
 }
 
 pub const Error = error { BufferNotEnough }; 
@@ -123,6 +247,26 @@ pub fn fourLength(value: *Element) usize {
     return l; 
 }
 
+pub fn deepFlushSize(deep: *Element, depth: usize) usize {
+    const left: *Element = @ptrFromInt(deep.Deep.left); 
+    const right: *Element = @ptrFromInt(deep.Deep.right); 
+    const inner: *Element = @ptrFromInt(deep.Deep.finger_tree); 
+    var s: usize = inner.FingerTree.size; 
+    for (left.Four) |f| {
+        if (f == 0) {
+            break; 
+        }
+        s += maybeThreeCalcSize(f, depth); 
+    }
+    for (right.Four) |f| {
+        if (f == 0) {
+            break; 
+        }
+        s += maybeThreeCalcSize(f, depth); 
+    }
+    return s; 
+}
+
 pub fn threeFlushSize(e: *Element, depth: usize) void {
     var size : usize = 0; 
     for (e.Three.content) |c| {
@@ -179,9 +323,9 @@ pub fn get(e: Element, idx: usize, depth: usize) usize {
                 rem -= cnt_c; 
             } else {
                 if (depth == 0) {
-                    return l.Four[c]; 
+                    return r.Four[c]; 
                 } else {
-                    return threeGet(@ptrFromInt(l.Four[c]), rem, depth); 
+                    return threeGet(@ptrFromInt(r.Four[c]), rem, depth); 
                 }
             }
         }
@@ -307,4 +451,21 @@ test {
     std.log.warn("size: {}", .{ remain1.FingerTree.size }); 
     std.log.warn("first: {}", .{ get(remain1.*, 0, 0) }); 
     std.log.warn("remain len: {}", .{ remain2_.len }); 
+}
+
+test {
+    var buffer: [20] Element = undefined; 
+    var empty0: Element = undefined; 
+    empty(&empty0); 
+    const one: *Element = &buffer[0]; 
+    var remain: []Element = buffer[1..]; 
+    remain = try push(one, remain, true, empty0, 24, 0, true); 
+    const two: *Element = &remain[0]; 
+    remain = try push(two, remain[1..], true, empty0, 9, 0, true); 
+    const m: *Element = &remain[0]; 
+    remain = try merge(m, remain[1..], true, two.*, one.*, 0); 
+    std.log.warn("one: {}", .{ get(one.*, 0, 0) }); 
+    std.log.warn("two: {}", .{ get(two.*, 0, 0)}); 
+    std.log.warn("m[0]: {}", .{ get(m.*, 0, 0) }); 
+    std.log.warn("m[1]: {}", .{ get(m.*, 1, 0) }); 
 }
