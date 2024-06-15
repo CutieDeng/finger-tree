@@ -98,8 +98,8 @@ pub fn merge(e: *Element, buffer: []Element, use_first: bool, left: Element, rig
             remain = try push(left2, remain, use_first, left_deep_fingertree.*, @intFromPtr(new), depth + 1, true); 
             var new_deep_fingertree: *Element = undefined; 
             remain = try allocSingle(remain, use_first, &new_deep_fingertree); 
-            const rdeep_inner : *Element = @ptrFromInt(rdeep.FingerTree.ptr); 
-            remain = try merge(new_deep_fingertree, remain, use_first, left_deep_fingertree.*, rdeep_inner.*, depth + 1); 
+            const rdeep_inner : *Element = @ptrFromInt(rdeep.Deep.finger_tree); 
+            remain = try merge(new_deep_fingertree, remain, use_first, left2.*, rdeep_inner.*, depth + 1); 
             var new_deep: *Element = undefined; 
             remain = try allocSingle(remain, use_first, &new_deep); 
             new_deep.Deep.finger_tree = @intFromPtr(new_deep_fingertree); 
@@ -468,4 +468,9 @@ test {
     std.log.warn("two: {}", .{ get(two.*, 0, 0)}); 
     std.log.warn("m[0]: {}", .{ get(m.*, 0, 0) }); 
     std.log.warn("m[1]: {}", .{ get(m.*, 1, 0) }); 
+    const mdup: *Element = &remain[0]; 
+    remain = try merge(mdup, remain[1..], true, m.*, m.*, 0); 
+    for (0..4) |i| {
+        std.log.warn("get md[{}]: {}", .{ i, get(mdup.*, i, 0) }); 
+    }
 }
