@@ -75,6 +75,8 @@ pub fn merge(e: *Element, buffer: []Element, use_first: bool, left: Element, rig
     const len = lrfourlen + rlfourlen; 
     var remain = buffer; 
     std.debug.assert(len >= 2 and len <= 8); 
+    const left_deep_fingertree: *Element = @ptrFromInt(ldeep.Deep.finger_tree); 
+    const right_deep_fingertree : *Element = @ptrFromInt(rdeep.Deep.finger_tree); 
     switch (len) {
         2, 3 => {
             var new: *Element = undefined; 
@@ -94,12 +96,10 @@ pub fn merge(e: *Element, buffer: []Element, use_first: bool, left: Element, rig
             threeFlushSize(new, depth); 
             var left2: *Element = undefined; 
             remain = try allocSingle(remain, use_first, &left2); 
-            const left_deep_fingertree: *Element = @ptrFromInt(ldeep.Deep.finger_tree); 
             remain = try push(left2, remain, use_first, left_deep_fingertree.*, @intFromPtr(new), depth + 1, true); 
             var new_deep_fingertree: *Element = undefined; 
             remain = try allocSingle(remain, use_first, &new_deep_fingertree); 
-            const rdeep_inner : *Element = @ptrFromInt(rdeep.Deep.finger_tree); 
-            remain = try merge(new_deep_fingertree, remain, use_first, left2.*, rdeep_inner.*, depth + 1); 
+            remain = try merge(new_deep_fingertree, remain, use_first, left2.*, right_deep_fingertree.*, depth + 1); 
             var new_deep: *Element = undefined; 
             remain = try allocSingle(remain, use_first, &new_deep); 
             new_deep.Deep.finger_tree = @intFromPtr(new_deep_fingertree); 
@@ -143,7 +143,22 @@ pub fn merge(e: *Element, buffer: []Element, use_first: bool, left: Element, rig
             }
             threeFlushSize(new[0], depth); 
             threeFlushSize(new[1], depth); 
-            unreachable; 
+            var left_deep_finger: [2]*Element = undefined; 
+            remain = try allocSingle(remain, use_first, &left_deep_finger[0]); 
+            remain = try allocSingle(remain, use_first, &left_deep_finger[1]); 
+            remain = try push(left_deep_finger[0], remain, use_first, left_deep_fingertree.*, @intFromPtr(new[0]), depth + 1, true); 
+            remain = try push(left_deep_finger[1], remain, use_first, left_deep_finger[0].*, @intFromPtr(new[1]), depth + 1, true); 
+            var new_deep_fingertree: *Element = undefined; 
+            remain = try allocSingle(remain, use_first, &new_deep_fingertree); 
+            remain = try merge(new_deep_fingertree, remain, use_first, left_deep_finger[1].*, right_deep_fingertree.*, depth + 1); 
+            var new_deep: *Element = undefined; 
+            remain = try allocSingle(remain, use_first, &new_deep); 
+            new_deep.Deep.finger_tree = @intFromPtr(new_deep); 
+            new_deep.Deep.left = ldeep.Deep.left; 
+            new_deep.Deep.right = rdeep.Deep.right; 
+            e.FingerTree.ptr = @intFromPtr(new_deep); 
+            e.FingerTree.t = Element.DeepT; 
+            e.FingerTree.size = deepFlushSize(new_deep, depth); 
         }, 
         7, 8 => {
             var new: [3]*Element = undefined;  
