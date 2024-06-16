@@ -525,21 +525,103 @@ pub fn innerPush(e: *Element, buffer: []Element, use_first: bool, origin: Elemen
         const inner_size = inner_ft.FingerTree.size; 
         _ = r_size; // autofix
         _ = r_len; // autofix
-        // no deep here?  
-        if (inner_ft.FingerTree.t == Element.EmptyT) {
-            // nothing here, must insert in different situation 
-            
-        } else {
+        if (inner_ft.FingerTree.t != Element.EmptyT or (inner_ft.FingerTree.t == Element.EmptyT and depth == 0)) {
             if (idx >= l_size and idx <= l_size + inner_size) {
                 var new_inner_ft: *Element = undefined; 
                 remain = try allocSingle(remain, use_first, &new_inner_ft); 
                 return innerPush(new_inner_ft, remain, use_first, inner_ft.*, idx - l_size, value, depth + 1); 
-            } else if (idx < l_size) {
-                // 
-            } else if (idx >= l_size + inner_size) {
-                // 
+            } 
+        }
+        if (idx <= l_size) {
+            // handle here ~ 
+            var left_tmp: Element = left.Four; 
+            std.mem.reverse(usize, &left_tmp.Four); 
+            var rst: [5]usize = undefined; 
+            remain = try deepFourPush(&rst, remain, use_first, left_tmp, idx, value, depth); 
+            const rst_len = fiveLength(rst); 
+            if (rst_len <= 4) {
+                // great 
+            } else {
+                // ... 
             }
         }
+    }
+    return remain; 
+}
+
+pub fn fiveLength(fiv: [5]usize) usize {
+    var cnt: usize = 0;
+    for (fiv) |v| {
+        if (v == 0) {
+            break; 
+        }
+        cnt += 1; 
+    }
+    return cnt; 
+}
+
+pub fn deepFourPush(rst: *[5]usize, buffer: []Element, use_first: bool, origin: Element, idx: usize, value: usize, depth: usize) ![]Element {
+    var cumulative: usize = idx; 
+    var quantile: ?usize = null; 
+    for (origin.Four, 0..) |f, idx0| {
+        if (f == 0) {
+            break;  
+        }
+        const f_sum = maybeThreeCalcSize(f, depth); 
+        if (cumulative > f_sum) {
+            cumulative -= f_sum; 
+        } else {
+            quantile = idx0; 
+            break; 
+        }
+    }
+    const quantile0 = quantile.?; 
+    if (depth == 0) {
+        var cumul: usize = 0; 
+        for (0..quantile0+1) |q| {
+            rst.*[cumul] = origin.Four[q]; 
+            cumul += 1; 
+        }
+        rst.*[cumul] = value; 
+        cumul += 1; 
+        for (origin.Four[quantile0+1..]) |q| {
+            if (q == 0) {
+                break; 
+            }
+            rst.*[cumul] = q; 
+            cumul += 1; 
+        }
+        if (cumul < 5) {
+            rst.*[cumul] = 0; 
+        }
+        return buffer; 
+    }
+    const origin0: *Element = @intFromPtr(origin.Four[quantile0]); 
+    var e: *Element = undefined; 
+    var e2: ?*Element = undefined; 
+    var remain = buffer; 
+    remain = try allocSingle(remain, use_first, &e); 
+    remain = try threeInnerPush(e, &e2, remain, use_first, origin0.*, cumulative, value, depth - 1); 
+    var cumul: usize = 0; 
+    for (0..quantile0) |q| {
+        rst.*[cumul] = origin.Four[q]; 
+        cumul += 1; 
+    }
+    rst.*[cumul] = @intFromPtr(e); 
+    cumul += 1; 
+    if (e2) |e2r| {
+        rst.*[cumul] = @intFromPtr(e2r); 
+        cumul += 1; 
+    }
+    for (origin.Four[quantile0+1..]) |q| {
+        if (q == 0) {
+            break; 
+        }
+        rst.*[cumul] = q; 
+        cumul += 1; 
+    }
+    if (cumul < 5) {
+        rst.*[cumul] = 0; 
     }
     return remain; 
 }
