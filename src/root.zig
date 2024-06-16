@@ -83,7 +83,7 @@ pub fn pop(e: *Element, buffer: []Element, use_first: bool, origin: Element, dep
                 new_deep.Deep.finger_tree = deep.Deep.finger_tree; 
                 e.FingerTree.t = Element.DeepT; 
                 e.FingerTree.ptr = @intFromPtr(new_deep); 
-                e.FingerTree.size = deepFlushSize(new_deep, depth); 
+                e.FingerTree.size = deepGetSize(new_deep, depth); 
             }
         } else {
             var new_deep_fingertree: *Element = undefined; 
@@ -116,7 +116,7 @@ pub fn pop(e: *Element, buffer: []Element, use_first: bool, origin: Element, dep
                     = @intFromPtr(new_rfour); 
             e.FingerTree.t = Element.DeepT; 
             e.FingerTree.ptr = @intFromPtr(new_deep); 
-            e.FingerTree.size = deepFlushSize(new_deep, depth); 
+            e.FingerTree.size = deepGetSize(new_deep, depth); 
         }
     } else {
         // just remove it directly 
@@ -135,7 +135,7 @@ pub fn pop(e: *Element, buffer: []Element, use_first: bool, origin: Element, dep
                 = @intFromPtr(new_rright); 
         e.FingerTree.ptr = @intFromPtr(new_deep); 
         e.FingerTree.t = Element.DeepT; 
-        e.FingerTree.size = deepFlushSize(new_deep, depth); 
+        e.FingerTree.size = deepGetSize(new_deep, depth); 
     }
     return remain; 
 }
@@ -197,7 +197,7 @@ pub fn merge(e: *Element, buffer: []Element, use_first: bool, left: Element, rig
             new_deep.Deep.right = rdeep.Deep.right; 
             e.FingerTree.ptr = @intFromPtr(new_deep); 
             e.FingerTree.t = Element.DeepT; 
-            e.FingerTree.size = deepFlushSize(new_deep, depth); 
+            e.FingerTree.size = deepGetSize(new_deep, depth); 
         }, 
         4, 5, 6 => {
             var new: [2]*Element = undefined; 
@@ -248,7 +248,7 @@ pub fn merge(e: *Element, buffer: []Element, use_first: bool, left: Element, rig
             new_deep.Deep.right = rdeep.Deep.right; 
             e.FingerTree.ptr = @intFromPtr(new_deep); 
             e.FingerTree.t = Element.DeepT; 
-            e.FingerTree.size = deepFlushSize(new_deep, depth); 
+            e.FingerTree.size = deepGetSize(new_deep, depth); 
         }, 
         7, 8 => {
             var new: [3]*Element = undefined;  
@@ -301,7 +301,7 @@ pub fn merge(e: *Element, buffer: []Element, use_first: bool, left: Element, rig
             new_deep.Deep.right = rdeep.Deep.right; 
             e.FingerTree.ptr = @intFromPtr(new_deep); 
             e.FingerTree.t = Element.DeepT; 
-            e.FingerTree.size = deepFlushSize(new_deep, depth); 
+            e.FingerTree.size = deepGetSize(new_deep, depth); 
         }, 
         else => unreachable, 
     }
@@ -365,7 +365,7 @@ pub fn fourLength(value: *Element) usize {
     return l; 
 }
 
-pub fn deepFlushSize(deep: *Element, depth: usize) usize {
+pub fn deepGetSize(deep: *Element, depth: usize) usize {
     const left: *Element = @ptrFromInt(deep.Deep.left); 
     const right: *Element = @ptrFromInt(deep.Deep.right); 
     const inner: *Element = @ptrFromInt(deep.Deep.finger_tree); 
