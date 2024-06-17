@@ -1143,7 +1143,7 @@ pub fn innerPop(e: *Element, buffer: []Element, use_first: bool, origin: Element
         const l_size = fourSize(left, depth); 
         const inner_size = inner.FingerTree.size;  
         if (index < l_size) {
-            const left0: Element = left.*; 
+            var left0: Element = left.*; 
             std.mem.reverse(usize, left0.Four[0..fourLength(left0)]); 
             var four: Element = undefined; 
             var fail: ?usize = undefined; 
@@ -1176,12 +1176,70 @@ pub fn innerPop(e: *Element, buffer: []Element, use_first: bool, origin: Element
                             e.FingerTree.ptr = @intFromPtr(new_deep); 
                             e.FingerTree.size = origin.FingerTree.size - 1; 
                         }
-                        fail_check.* = null; 
-                        return remain; 
                     } else {
+                        std.debug.assert(depth > 0); 
+                        var new_left: *Element = undefined; 
+                        var new_right: *Element = undefined; 
+                        var new_deep: *Element = undefined; 
                         const r_first: *Element = @ptrFromInt(right.Four[0]); 
-                        _ = r_first; // autofix
+                        if (r_first.Three.content[2] == 0) {
+                            var new_three: *Element = undefined; 
+                            remain = try allocSingle(remain, use_first, &new_three); 
+                            if (rlen == 1) {
+                                new_three.Three.content[0] = f; 
+                                @memcpy(new_three.Three.content[1..3], r_first.Three.content[0..2]); 
+                                threeFlushSize(new_three, depth);     
+                                e.FingerTree.ptr = @intFromPtr(new_three); 
+                                e.FingerTree.size = origin.FingerTree.size - 1; 
+                                e.FingerTree.t = Element.SingleT; 
+                            } else {
+                                remain = try allocSingle(remain, use_first, &new_left); 
+                                remain = try allocSingle(remain, use_first, &new_right); 
+                                remain = try allocSingle(remain, use_first, &new_deep); 
+                                new_three.Three.content[0] = f; 
+                                @memcpy(new_three.Three.content[1..3], r_first.Three.content[0..2]); 
+                                threeFlushSize(new_three, depth); 
+                                new_left.Four[0] = @intFromPtr(new_three); 
+                                new_left.Four[1] = 0; 
+                                @memcpy(new_right.Four[0..rlen - 1], right.Four[1..rlen]); 
+                                new_right.Four[rlen-1] = 0; 
+                                new_deep.Deep.left = @intFromPtr(new_left); 
+                                new_deep.Deep.finger_tree = deep.Deep.finger_tree; 
+                                new_deep.Deep.right = @intFromPtr(new_right); 
+                                e.FingerTree.t = Element.DeepT; 
+                                e.FingerTree.size = origin.FingerTree.size - 1; 
+                                e.FingerTree.ptr = @intFromPtr(new_deep); 
+                            }
+                        } else {
+                            var new_three0: *Element = undefined; 
+                            var new_three1: *Element = undefined; 
+                            remain = try allocSingle(remain, use_first, &new_three0); 
+                            remain = try allocSingle(remain, use_first, &new_three1); 
+                            remain = try allocSingle(remain, use_first, &new_left); 
+                            remain = try allocSingle(remain, use_first, &new_right); 
+                            remain = try allocSingle(remain, use_first, &new_deep); 
+                            new_three0.Three.content[0] = f; 
+                            new_three0.Three.content[1] = r_first.Three.content[0]; 
+                            new_three0.Three.content[2] = 0; 
+                            threeFlushSize(new_three0, depth); 
+                            new_three1.Three.content[0] = r_first.Three.content[1]; 
+                            new_three1.Three.content[1] = r_first.Three.content[2]; 
+                            new_three1.Three.content[2] = 0; 
+                            threeFlushSize(new_three1, depth); 
+                            new_left.Four[0] = @intFromPtr(new_three0); 
+                            new_left.Four[1] = 0; 
+                            new_right.Four[0] = @intFromPtr(new_three1); 
+                            @memcpy(new_right.Four[1..4], right.Four[1..4]); 
+                            new_deep.Deep.left = @intFromPtr(new_left); 
+                            new_deep.Deep.finger_tree = deep.Deep.finger_tree; 
+                            new_deep.Deep.right = @intFromPtr(new_right); 
+                            e.FingerTree.ptr = @intFromPtr(new_deep); 
+                            e.FingerTree.size = origin.FingerTree.size - 1; 
+                            e.FingerTree.t = Element.DeepT; 
+                        }
                     }
+                    fail_check.* = null; 
+                    return remain; 
                 }
                 var new_inner_ft: *Element = undefined; 
                 var new_left: *Element = undefined; 
@@ -1271,7 +1329,7 @@ pub fn innerPop(e: *Element, buffer: []Element, use_first: bool, origin: Element
             var inner0: Element = undefined; 
             var fail: ?usize = undefined; 
             var new_deep: *Element = undefined; 
-            remain = try innerPop(&inner0, remain, use_first, inner.*, depth + 1, pop_rst, &fail); 
+            remain = try innerPop(&inner0, remain, use_first, inner.*, r, depth + 1, pop_rst, &fail); 
             if (fail) |f| {
                 if (f == 0) {
                     unreachable; 
@@ -1337,13 +1395,20 @@ pub fn innerPop(e: *Element, buffer: []Element, use_first: bool, origin: Element
             } else {
                 var inner1: *Element = undefined; 
                 remain = try allocSingle(remain, use_first, &inner1); 
+                remain = try allocSingle(remain, use_first, &new_deep); 
                 inner1.* = inner0; 
+                new_deep.Deep.left = deep.Deep.left; 
+                new_deep.Deep.finger_tree = @intFromPtr(inner1); 
+                new_deep.Deep.right = deep.Deep.right; 
+                e.FingerTree.ptr = @intFromPtr(new_deep); 
+                e.FingerTree.size = origin.FingerTree.size - 1; 
+                e.FingerTree.t = Element.DeepT; 
             }
-            _ = r; // autofix
         } else {
             const r = index - l_size - inner_size; 
-
+            std.log.warn("Attempt rm right, but not impl; (idx {}) (lsize {}) (innersize {})", .{ index, l_size, inner_size }); 
             _ = r; // autofix
+            unreachable; 
         }
     }
     fail_check.* = null; 
@@ -1356,7 +1421,6 @@ pub fn fourInnerPop(e: *Element, buffer: []Element, use_first: bool, origin: Ele
         if (origin.Four[1] == 0) {
             std.debug.assert(index == 0); 
             pop_rst.* = origin.Four[0]; 
-            // ?!??!?! 
             fail_check.* = 0; 
             return buffer; 
         } else {
@@ -1364,6 +1428,7 @@ pub fn fourInnerPop(e: *Element, buffer: []Element, use_first: bool, origin: Ele
             @memcpy(e.Four[0..index], origin.Four[0..index]); 
             @memcpy(e.Four[index..flen-1], origin.Four[index+1..flen]); 
             e.Four[flen] = 0; 
+            pop_rst.* = origin.Four[index]; 
         }
     } else {
         var cum : usize = index; 
@@ -1446,5 +1511,25 @@ pub fn threeInnerPop(e: *Element, buffer: []Element, use_first: bool, origin: El
     _ = index; // autofix
     _ = depth; // autofix
     _ = pop_rst; // autofix
-    
+    unreachable; 
+}
+
+test {
+    var buf: [30] Element = undefined; 
+    var remain: []Element = &buf; 
+    const emp = &remain[0]; 
+    const one = &remain[1]; 
+    empty(emp); 
+    remain = try push(one, remain[2..], true, emp.*, 1, 0, true); 
+    const two = &remain[0]; 
+    remain = try push(two, remain[1..], true, one.*, 3, 0, true); 
+    const fiv = &remain[0]; 
+    remain = try push(fiv, remain[1..], true, two.*, 5, 0, false); 
+    const sev = &remain[0]; 
+    var rst: usize = undefined; 
+    var fail: ?usize = undefined; 
+    remain = try innerPop(sev, remain[1..], true, fiv.*, 1, 0, &rst, &fail); 
+    std.debug.assert(fail == null); 
+    std.log.warn("Remove successful, rst: {x}, but expect {}", .{ rst, 1 }); 
+    std.debug.assert(rst == 1); 
 }
