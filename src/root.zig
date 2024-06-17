@@ -1149,29 +1149,109 @@ pub fn innerPop(e: *Element, buffer: []Element, use_first: bool, origin: Element
             var fail: ?usize = undefined; 
             remain = try fourInnerPop(&four, remain, use_first, left0, index, depth, pop_rst, &fail); 
             if (fail) |f| {
-                if (f == 0) {
-                    // ... 
+                if (inner.FingerTree.t == Element.EmptyT) {
+                    const rlen = fourLength(right.*); 
+                    if (f == 0) {
+                        std.debug.assert(depth == 0); 
+                        if (rlen == 1) {
+                            e.FingerTree.ptr = right.Four[0]; 
+                            // e.FingerTree.size = origin.FingerTree.size - 1; 
+                            e.FingerTree.size = 1; 
+                            e.FingerTree.t = Element.SingleT; 
+                        } else {
+                            var new_left: *Element = undefined; 
+                            var new_right: *Element = undefined; 
+                            var new_deep: *Element = undefined; 
+                            remain = try allocSingle(remain, use_first, &new_left); 
+                            remain = try allocSingle(remain, use_first, &new_right); 
+                            remain = try allocSingle(remain, use_first, &new_deep); 
+                            @memcpy(new_right.Four[0..3], right.Four[1..4]);  
+                            new_right.Four[3] = 0;  
+                            new_left.Four[0] = right.Four[0]; 
+                            new_left.Four[1] = 0;
+                            new_deep.Deep.left = @intFromPtr(new_left); 
+                            new_deep.Deep.finger_tree = deep.Deep.finger_tree; 
+                            new_deep.Deep.left = @intFromPtr(new_right); 
+                            e.FingerTree.t = Element.DeepT; 
+                            e.FingerTree.ptr = @intFromPtr(new_deep); 
+                            e.FingerTree.size = origin.FingerTree.size - 1; 
+                        }
+                        fail_check.* = null; 
+                        return remain; 
+                    } else {
+                        const r_first: *Element = @ptrFromInt(right.Four[0]); 
+                        _ = r_first; // autofix
+                    }
                 }
                 var new_inner_ft: *Element = undefined; 
                 var new_left: *Element = undefined; 
+                var new_deep: *Element = undefined; 
                 var p: usize = undefined; 
                 remain = try allocSingle(remain, use_first, &new_inner_ft); 
                 remain = try allocSingle(remain, use_first, &new_left); 
+                remain = try allocSingle(remain, use_first, &new_deep); 
                 remain = try pop(new_inner_ft, remain, use_first, inner.*, depth + 1, false, &p); 
                 const this_three: *Element = @ptrFromInt(p); 
-                // threeInnerPush()
-                if (this_three.Three.content[2] == 0) {
-                    new_left.Four[0] = this_three.Three.content[1]; 
-                    new_left.Four[1] = this_three.Three.content[0]; 
-                    new_left.Four[2] = 0; 
-                } else {
-                    new_left.Four[0] = this_three.Three.content[2]; 
-                    new_left.Four[1] = this_three.Three.content[1]; 
-                    new_left.Four[2] = this_three.Three.content[0]; 
-                    new_left.Four[3] = 0; 
+                if (f == 0) {
+                    std.debug.assert(depth == 0); 
+                    if (this_three.Three.content[2] == 0) {
+                        new_left.Four[0] = this_three.Three.content[1]; 
+                        new_left.Four[1] = this_three.Three.content[0]; 
+                        new_left.Four[2] = 0; 
+                    } else {
+                        new_left.Four[0] = this_three.Three.content[2]; 
+                        new_left.Four[1] = this_three.Three.content[1]; 
+                        new_left.Four[2] = this_three.Three.content[0]; 
+                        new_left.Four[3] = 0; 
+                    }
+                    new_deep.Deep.left = @intFromPtr(new_left); 
+                    new_deep.Deep.finger_tree = @intFromPtr(new_inner_ft); 
+                    new_deep.Deep.right = deep.Deep.right; 
+                    e.FingerTree.ptr = @intFromPtr(new_deep);
+                    e.FingerTree.t = Element.DeepT; 
+                    e.FingerTree.size = origin.FingerTree.size - 1; 
+                    fail_check.* = null; 
+                    return remain; 
                 }
-                // ??? 
-                unreachable; 
+                const inner_three: *Element = @ptrFromInt(this_three.Three.content[0]); 
+                if (inner_three.Three.content[2] == 0) {
+                    var new_three0: *Element = undefined; 
+                    remain = try allocSingle(remain, use_first, &new_three0); 
+                    @memcpy(new_three0.Three.content[1..3], inner_three.Three.content[0..2]);  
+                    new_three0.Three.content[0] = f; 
+                    threeFlushSize(new_three0, depth); 
+                    @memcpy(new_left.Four[0..2], this_three.Three.content[1..]); 
+                    new_left.Four[2] = @intFromPtr(new_three0); 
+                    new_left.Four[3] = 0; 
+                    new_deep.Deep.left = @intFromPtr(new_left); 
+                    new_deep.Deep.finger_tree = @intFromPtr(new_inner_ft); 
+                    new_deep.Deep.right = deep.Deep.right; 
+                    e.FingerTree.t = Element.DeepT; 
+                    e.FingerTree.ptr = @intFromPtr(new_deep); 
+                    e.FingerTree.size = origin.FingerTree.size - 1; 
+                } else {
+                    var new_three0: *Element = undefined; 
+                    var new_three1: *Element = undefined; 
+                    remain = try allocSingle(remain, use_first, &new_three0); 
+                    remain = try allocSingle(remain, use_first, &new_three1); 
+                    new_three0.Three.content[0] = f; 
+                    new_three0.Three.content[1] = inner_three.Three.content[0]; 
+                    new_three0.Three.content[2] = 0; 
+                    threeFlushSize(new_three0, depth); 
+                    new_three1.Three.content[0] = inner_three.Three.content[1]; 
+                    new_three1.Three.content[1] = inner_three.Three.content[2]; 
+                    new_three1.Three.content[2] = 0; 
+                    threeFlushSize(new_three1, depth);  
+                    @memcpy(new_left.Four[0..2], this_three.Three.content[1..]); 
+                    new_left.Four[2] = @intFromPtr(new_three1); 
+                    new_left.Four[3] = @intFromPtr(new_three0); 
+                    new_deep.Deep.left = @intFromPtr(new_left);
+                    new_deep.Deep.finger_tree = @intFromPtr(new_inner_ft); 
+                    new_deep.Deep.right = deep.Deep.right; 
+                    e.FingerTree.t = Element.DeepT; 
+                    e.FingerTree.ptr = @intFromPtr(new_deep); 
+                    e.FingerTree.size = origin.FingerTree.size - 1; 
+                }
             } else {
                 std.mem.reverse(usize, four.Four[0..fourLength(four)]); 
                 var new_four: *Element = undefined; 
