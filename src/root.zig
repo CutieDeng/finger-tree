@@ -1113,11 +1113,9 @@ pub fn innerPop(e: *Element, buffer: []Element, use_first: bool, origin: Element
     var remain = buffer; 
     if (origin.FingerTree.t == Element.SingleT) {
         if (depth == 0) {
-            // handle 
             empty(e); 
             pop_rst.* = origin.FingerTree.ptr; 
         } else {
-            // var new_three: *Element = 
             var tmp: Element = undefined; 
             var fail: ?usize = undefined; 
             const three: *Element = @ptrFromInt(origin.FingerTree.ptr); 
@@ -1188,7 +1186,7 @@ pub fn innerPop(e: *Element, buffer: []Element, use_first: bool, origin: Element
                             if (rlen == 1) {
                                 new_three.Three.content[0] = f; 
                                 @memcpy(new_three.Three.content[1..3], r_first.Three.content[0..2]); 
-                                threeFlushSize(new_three, depth);     
+                                threeFlushSize(new_three, depth - 1);     
                                 e.FingerTree.ptr = @intFromPtr(new_three); 
                                 e.FingerTree.size = origin.FingerTree.size - 1; 
                                 e.FingerTree.t = Element.SingleT; 
@@ -1198,7 +1196,7 @@ pub fn innerPop(e: *Element, buffer: []Element, use_first: bool, origin: Element
                                 remain = try allocSingle(remain, use_first, &new_deep); 
                                 new_three.Three.content[0] = f; 
                                 @memcpy(new_three.Three.content[1..3], r_first.Three.content[0..2]); 
-                                threeFlushSize(new_three, depth); 
+                                threeFlushSize(new_three, depth - 1); 
                                 new_left.Four[0] = @intFromPtr(new_three); 
                                 new_left.Four[1] = 0; 
                                 @memcpy(new_right.Four[0..rlen - 1], right.Four[1..rlen]); 
@@ -1295,11 +1293,11 @@ pub fn innerPop(e: *Element, buffer: []Element, use_first: bool, origin: Element
                     new_three0.Three.content[0] = f; 
                     new_three0.Three.content[1] = inner_three.Three.content[0]; 
                     new_three0.Three.content[2] = 0; 
-                    threeFlushSize(new_three0, depth); 
+                    threeFlushSize(new_three0, depth - 1); 
                     new_three1.Three.content[0] = inner_three.Three.content[1]; 
                     new_three1.Three.content[1] = inner_three.Three.content[2]; 
                     new_three1.Three.content[2] = 0; 
-                    threeFlushSize(new_three1, depth);  
+                    threeFlushSize(new_three1, depth - 1); 
                     @memcpy(new_left.Four[0..2], this_three.Three.content[1..]); 
                     new_left.Four[2] = @intFromPtr(new_three1); 
                     new_left.Four[3] = @intFromPtr(new_three0); 
@@ -1407,8 +1405,179 @@ pub fn innerPop(e: *Element, buffer: []Element, use_first: bool, origin: Element
         } else {
             const r = index - l_size - inner_size; 
             std.log.warn("Attempt rm right, but not impl; (idx {}) (lsize {}) (innersize {})", .{ index, l_size, inner_size }); 
-            _ = r; // autofix
-            unreachable; 
+            var right0: Element = undefined; 
+            var fail: ?usize = undefined; 
+            remain = try fourInnerPop(&right0, remain, use_first, right.*, r, depth, pop_rst, &fail); 
+            if (fail) |f| {
+                if (inner.FingerTree.t == Element.EmptyT) {
+                    const llen = fourLength(left.*); 
+                    if (f == 0) {
+                        std.debug.assert(depth == 0); 
+                        if (llen == 1) {
+                            e.FingerTree.ptr = left.Four[0]; 
+                            e.FingerTree.size = 1; 
+                            e.FingerTree.t = Element.SingleT; 
+                        } else {
+                            var new_left: *Element = undefined; 
+                            var new_right: *Element = undefined; 
+                            var new_deep: *Element = undefined; 
+                            remain = try allocSingle(remain, use_first, &new_left); 
+                            remain = try allocSingle(remain, use_first, &new_right); 
+                            remain = try allocSingle(remain, use_first, &new_deep); 
+                            @memcpy(new_left.Four[0..3], left.Four[1..4]);  
+                            new_left.Four[3] = 0;  
+                            new_right.Four[0] = left.Four[0]; 
+                            new_right.Four[1] = 0;
+                            new_deep.Deep.left = @intFromPtr(new_left); 
+                            new_deep.Deep.finger_tree = deep.Deep.finger_tree; 
+                            new_deep.Deep.left = @intFromPtr(new_right); 
+                            e.FingerTree.t = Element.DeepT; 
+                            e.FingerTree.ptr = @intFromPtr(new_deep); 
+                            e.FingerTree.size = origin.FingerTree.size - 1; 
+                        }
+                    } else {
+                        std.debug.assert(depth > 0); 
+                        var new_left: *Element = undefined; 
+                        var new_right: *Element = undefined; 
+                        var new_deep: *Element = undefined; 
+                        const l_first: *Element = @ptrFromInt(left.Four[0]); 
+                        if (l_first.Three.content[2] == 0) {
+                            var new_three: *Element = undefined; 
+                            remain = try allocSingle(remain, use_first, &new_three); 
+                            if (llen == 1) {
+                                @memcpy(new_three.Three.content[0..2], l_first.Three.content[0..2]); 
+                                new_three.Three.content[2] = f; 
+                                threeFlushSize(new_three, depth - 1);     
+                                e.FingerTree.ptr = @intFromPtr(new_three); 
+                                e.FingerTree.size = origin.FingerTree.size - 1; 
+                                e.FingerTree.t = Element.SingleT; 
+                            } else {
+                                remain = try allocSingle(remain, use_first, &new_left); 
+                                remain = try allocSingle(remain, use_first, &new_right); 
+                                remain = try allocSingle(remain, use_first, &new_deep); 
+                                @memcpy(new_three.Three.content[0..2], l_first.Three.content[0..2]); 
+                                new_three.Three.content[2] = f; 
+                                threeFlushSize(new_three, depth - 1); 
+                                new_right.Four[0] = @intFromPtr(new_three); 
+                                new_left.Four[1] = 0; 
+                                @memcpy(new_left.Four[0..llen - 1], left.Four[1..llen]); 
+                                new_left.Four[llen-1] = 0; 
+                                new_deep.Deep.left = @intFromPtr(new_left); 
+                                new_deep.Deep.finger_tree = deep.Deep.finger_tree; 
+                                new_deep.Deep.right = @intFromPtr(new_right); 
+                                e.FingerTree.t = Element.DeepT; 
+                                e.FingerTree.size = origin.FingerTree.size - 1; 
+                                e.FingerTree.ptr = @intFromPtr(new_deep); 
+                            }
+                        } else {
+                            var new_three0: *Element = undefined; 
+                            var new_three1: *Element = undefined; 
+                            remain = try allocSingle(remain, use_first, &new_three0); 
+                            remain = try allocSingle(remain, use_first, &new_three1); 
+                            remain = try allocSingle(remain, use_first, &new_left); 
+                            remain = try allocSingle(remain, use_first, &new_right); 
+                            remain = try allocSingle(remain, use_first, &new_deep); 
+                            new_three0.Three.content[0] = l_first.Three.content[0]; 
+                            new_three0.Three.content[1] = l_first.Three.content[1]; 
+                            new_three0.Three.content[2] = 0; 
+                            threeFlushSize(new_three0, depth); 
+                            new_three1.Three.content[0] = l_first.Three.content[2]; 
+                            new_three1.Three.content[1] = f; 
+                            new_three1.Three.content[2] = 0; 
+                            threeFlushSize(new_three1, depth); 
+                            new_right.Four[0] = @intFromPtr(new_three1); 
+                            new_right.Four[1] = 0; 
+                            new_left.Four[0] = @intFromPtr(new_three0); 
+                            @memcpy(new_left.Four[1..4], right.Four[1..4]); 
+                            new_deep.Deep.left = @intFromPtr(new_left); 
+                            new_deep.Deep.finger_tree = deep.Deep.finger_tree; 
+                            new_deep.Deep.right = @intFromPtr(new_right); 
+                            e.FingerTree.ptr = @intFromPtr(new_deep); 
+                            e.FingerTree.size = origin.FingerTree.size - 1; 
+                            e.FingerTree.t = Element.DeepT; 
+                        }
+                    }
+                    fail_check.* = null; 
+                    return remain; 
+                } 
+                var new_inner_ft: *Element = undefined; 
+                var new_right: *Element = undefined; 
+                var new_deep: *Element = undefined; 
+                var p: usize = undefined; 
+                remain = try allocSingle(remain, use_first, &new_inner_ft); 
+                remain = try allocSingle(remain, use_first, &new_right); 
+                remain = try allocSingle(remain, use_first, &new_deep); 
+                remain = try pop(new_inner_ft, remain, use_first, inner.*, depth + 1, true, &p); 
+                const this_three: *Element = @ptrFromInt(p); 
+                if (f == 0) {
+                    std.debug.assert(depth == 0); 
+                    @memcpy(new_right.Four[0..3], this_three.Three.content[0..]); 
+                    new_right.Four[3] = 0; 
+                    new_deep.Deep.left = deep.Deep.left; 
+                    new_deep.Deep.finger_tree = @intFromPtr(new_inner_ft); 
+                    new_deep.Deep.right = @intFromPtr(new_right); 
+                    e.FingerTree.ptr = @intFromPtr(new_deep);
+                    e.FingerTree.t = Element.DeepT; 
+                    e.FingerTree.size = origin.FingerTree.size - 1; 
+                    fail_check.* = null; 
+                    return remain; 
+                }
+                const three_len : usize = if (this_three.Three.content[2] == 0) 1 else 2; 
+                const inner_three: *Element = @ptrFromInt(this_three.Three.content[three_len]); 
+                if (inner_three.Three.content[2] == 0) {
+                    var new_three0: *Element = undefined; 
+                    remain = try allocSingle(remain, use_first, &new_three0); 
+                    @memcpy(new_three0.Three.content[0..2], inner_three.Three.content[0..2]);  
+                    new_three0.Three.content[2] = f; 
+                    threeFlushSize(new_three0, depth - 1); 
+                    @memcpy(new_right.Four[0..three_len], this_three.Three.content[0..three_len]); 
+                    new_right.Four[three_len] = @intFromPtr(new_three0); 
+                    new_right.Four[three_len+1] = 0; 
+                    new_deep.Deep.left = deep.Deep.left; 
+                    new_deep.Deep.finger_tree = @intFromPtr(new_inner_ft); 
+                    new_deep.Deep.right = @intFromPtr(new_right); 
+                    e.FingerTree.t = Element.DeepT; 
+                    e.FingerTree.ptr = @intFromPtr(new_deep); 
+                    e.FingerTree.size = origin.FingerTree.size - 1; 
+                } else {
+                    var new_three0: *Element = undefined; 
+                    var new_three1: *Element = undefined; 
+                    remain = try allocSingle(remain, use_first, &new_three0); 
+                    remain = try allocSingle(remain, use_first, &new_three1); 
+                    new_three0.Three.content[0] = inner_three.Three.content[0]; 
+                    new_three0.Three.content[1] = inner_three.Three.content[1]; 
+                    new_three0.Three.content[2] = 0; 
+                    threeFlushSize(new_three0, depth - 1); 
+                    new_three1.Three.content[0] = inner_three.Three.content[2]; 
+                    new_three1.Three.content[1] = f; 
+                    new_three1.Three.content[2] = 0; 
+                    threeFlushSize(new_three1, depth - 1); 
+                    @memcpy(new_right.Four[0..three_len], this_three.Three.content[0..three_len]); 
+                    new_right.Four[three_len] = @intFromPtr(new_three1); 
+                    new_right.Four[three_len+1] = @intFromPtr(new_three0); 
+                    if (three_len == 1) {
+                        new_right.Four[3] = 0; 
+                    }
+                    new_deep.Deep.left = deep.Deep.left; 
+                    new_deep.Deep.finger_tree = @intFromPtr(new_inner_ft); 
+                    new_deep.Deep.right = @intFromPtr(new_right); 
+                    e.FingerTree.t = Element.DeepT; 
+                    e.FingerTree.ptr = @intFromPtr(new_deep); 
+                    e.FingerTree.size = origin.FingerTree.size - 1; 
+                }
+            } else {
+                var new_four: *Element = undefined; 
+                var new_deep: *Element = undefined; 
+                remain = try allocSingle(remain, use_first, &new_four); 
+                remain = try allocSingle(remain, use_first, &new_deep); 
+                new_four.* = right0; 
+                new_deep.Deep.finger_tree = deep.Deep.finger_tree; 
+                new_deep.Deep.left = deep.Deep.left; 
+                new_deep.Deep.right = @intFromPtr(new_four); 
+                e.FingerTree.t = Element.DeepT;
+                e.FingerTree.ptr = @intFromPtr(new_deep); 
+                e.FingerTree.size = origin.FingerTree.size - 1;  
+            }
         }
     }
     fail_check.* = null; 
@@ -1503,15 +1672,129 @@ pub fn fourInnerPop(e: *Element, buffer: []Element, use_first: bool, origin: Ele
 }
 
 pub fn threeInnerPop(e: *Element, buffer: []Element, use_first: bool, origin: Element, index: usize, depth: usize, pop_rst: *usize, fail_check: *?usize) ![]Element {
-    _ = fail_check; // autofix
-    _ = e; // autofix
-    _ = buffer; // autofix
-    _ = use_first; // autofix
-    _ = origin; // autofix
-    _ = index; // autofix
-    _ = depth; // autofix
-    _ = pop_rst; // autofix
-    unreachable; 
+    std.debug.assert(index < origin.Three.size); 
+    var remain = buffer; 
+    if (depth == 0) {
+        if (origin.Three.content[2] == 0) {
+            if (index == 0) {
+                pop_rst.* = origin.Three.content[0]; 
+                fail_check.* = origin.Three.content[1]; 
+                return remain; 
+            } else if (index == 1) {
+                pop_rst.* = origin.Three.content[1]; 
+                fail_check.* = origin.Three.content[0]; 
+                return remain; 
+            }
+        } else {
+            pop_rst.* = origin.Three.content[index]; 
+            @memcpy(e.Three.content[0..index], origin.Three.content[0..index]); 
+            @memcpy(e.Three.content[index..2], origin.Three.content[index+1..]); 
+            e.Three.content[2] = 0; 
+            threeFlushSize(e, depth); 
+        } 
+    } else {
+        var cum = index; 
+        for (origin.Three.content, 0..) |c, the_idx| {
+            if (c == 0) {
+                unreachable; 
+            }
+            const p: *Element = @ptrFromInt(c); 
+            if (cum >= p.Three.size) {
+                cum -= p.Three.size; 
+            } else {
+                var buf: Element = undefined; 
+                var fail: ?usize = undefined; 
+                remain = try threeInnerPop(&buf, remain, use_first, p.*, cum, depth - 1, pop_rst, &fail); 
+                if (fail) |f| {
+                    std.debug.assert(f != 0); 
+                    var new_three0: *Element = undefined; 
+                    var new_three1: *Element = undefined; 
+                    if (the_idx == 0) {
+                        const nxt_three: *Element = @ptrFromInt(origin.Three.content[1]); 
+                        remain = try allocSingle(remain, use_first, &new_three0); 
+                        if (nxt_three.Three.content[2] == 0) {
+                            new_three0.Three.content[0] = f; 
+                            new_three0.Three.content[1] = nxt_three.Three.content[0]; 
+                            new_three0.Three.content[2] = nxt_three.Three.content[1]; 
+                            threeFlushSize(new_three0, depth - 1); 
+                            if (origin.Three.content[2] == 0) {
+                                fail_check.* = @intFromPtr(new_three0); 
+                                return remain; 
+                            }
+                            e.Three.content[0] = @intFromPtr(new_three0); 
+                            e.Three.content[1] = origin.Three.content[2]; 
+                            e.Three.content[2] = 0; 
+                            threeFlushSize(e, depth); 
+                        } else {
+                            remain = try allocSingle(remain, use_first, &new_three1); 
+                            new_three0.Three.content[0] = f; 
+                            new_three0.Three.content[1] = nxt_three.Three.content[0]; 
+                            new_three0.Three.content[2] = 0; 
+                            threeFlushSize(new_three0, depth - 1); 
+                            new_three1.Three.content[0] = nxt_three.Three.content[1]; 
+                            new_three1.Three.content[1] = nxt_three.Three.content[2]; 
+                            new_three1.Three.content[2] = 0; 
+                            threeFlushSize(new_three1, depth - 1); 
+                            e.Three.content[0] = @intFromPtr(new_three0); 
+                            e.Three.content[1] = @intFromPtr(new_three1); 
+                            e.Three.content[2] = origin.Three.content[2]; 
+                            threeFlushSize(e, depth); 
+                        }
+                    } else {
+                        const prev_three: *Element = @ptrFromInt(origin.Three.content[the_idx - 1]); 
+                        remain = try allocSingle(remain, use_first, &new_three0); 
+                        if (prev_three.Three.content[2] == 0) {
+                            new_three0.Three.content[0] = prev_three.Three.content[0]; 
+                            new_three0.Three.content[1] = prev_three.Three.content[1]; 
+                            new_three0.Three.content[2] = f; 
+                            threeFlushSize(new_three0, depth - 1); 
+                            if (origin.Three.content[2] == 0) {
+                                fail_check.* = @intFromPtr(new_three0); 
+                                return remain; 
+                            }
+                            @memcpy(e.Three.content[0..the_idx-1], origin.Three.content[0..the_idx-1]); 
+                            e.Three.content[the_idx-1] = @intFromPtr(new_three0); 
+                            @memcpy(e.Three.content[the_idx..2], origin.Three.content[the_idx+1..]); 
+                            e.Three.content[2] = 0; 
+                            threeFlushSize(e, depth); 
+                        } else {
+                            remain = try allocSingle(remain, use_first, &new_three1); 
+                            new_three0.Three.content[0] = prev_three.Three.content[0]; 
+                            new_three0.Three.content[1] = prev_three.Three.content[1]; 
+                            new_three0.Three.content[2] = 0; 
+                            threeFlushSize(new_three0, depth - 1); 
+                            new_three1.Three.content[0] = prev_three.Three.content[2]; 
+                            new_three1.Three.content[1] = f; 
+                            new_three1.Three.content[2] = 0; 
+                            threeFlushSize(new_three1, depth - 1); 
+                            if (the_idx == 1) {
+                                e.Three.content[0] = @intFromPtr(new_three0); 
+                                e.Three.content[1] = @intFromPtr(new_three1); 
+                                e.Three.content[2] = origin.Three.content[2]; 
+                            } else if (the_idx == 2) {
+                                e.Three.content[0] = origin.Three.content[0]; 
+                                e.Three.content[1] = @intFromPtr(new_three0); 
+                                e.Three.content[2] = @intFromPtr(new_three1); 
+                            } else {
+                                unreachable; 
+                            }
+                            threeFlushSize(e, depth); 
+                        }
+                    }
+                } else {
+                    var new_three: *Element = undefined; 
+                    remain = try allocSingle(remain, use_first, &new_three); 
+                    new_three.* = buf; 
+                    e.* = origin; 
+                    e.Three.content[the_idx] = @intFromPtr(new_three); 
+                    threeFlushSize(e, depth); 
+                }
+                break; 
+            }
+        } 
+    } 
+    fail_check.* = null; 
+    return remain; 
 }
 
 test {
@@ -1524,12 +1807,12 @@ test {
     const two = &remain[0]; 
     remain = try push(two, remain[1..], true, one.*, 3, 0, true); 
     const fiv = &remain[0]; 
-    remain = try push(fiv, remain[1..], true, two.*, 5, 0, false); 
+    remain = try push(fiv, remain[1..], true, two.*, 5, 0, true); 
     const sev = &remain[0]; 
     var rst: usize = undefined; 
     var fail: ?usize = undefined; 
     remain = try innerPop(sev, remain[1..], true, fiv.*, 1, 0, &rst, &fail); 
     std.debug.assert(fail == null); 
-    std.log.warn("Remove successful, rst: {x}, but expect {}", .{ rst, 1 }); 
-    std.debug.assert(rst == 1); 
+    std.log.warn("Remove successful, rst: {x}, but expect {}", .{ rst, 3 }); 
+    std.debug.assert(rst == 3); 
 }
