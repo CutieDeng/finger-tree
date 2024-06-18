@@ -1421,7 +1421,6 @@ pub fn innerPop(e: *Element, buffer: []Element, use_first: bool, origin: Element
             }
         } else {
             const r = index - l_size - inner_size; 
-            std.log.warn("Attempt rm right, but not impl; (idx {}) (lsize {}) (innersize {})", .{ index, l_size, inner_size }); 
             var right0: Element = undefined; 
             var fail: ?usize = undefined; 
             remain = try fourInnerPop(&right0, remain, use_first, right.*, r, depth, pop_rst, &fail); 
@@ -1857,9 +1856,10 @@ pub fn fourSplit(left: *Element, right: *Element, mid: *usize, inner_idx: *usize
             right.Four[3-idx] = 0; 
             mid.* = origin.Four[idx]; 
             inner_idx.* = cum; 
-            return buffer; 
+            break; 
         }
     }
+    return buffer; 
 }
 
 pub fn fourToFingerTree(e: *Element, buffer: []Element, use_first: bool, origin: Element, depth: usize) ![]Element {
@@ -1893,6 +1893,7 @@ pub fn fourToFingerTree(e: *Element, buffer: []Element, use_first: bool, origin:
     e.FingerTree.t = Element.DeepT; 
     e.FingerTree.ptr = @intFromPtr(deep); 
     e.FingerTree.size = deepGetSize(deep, depth); 
+    return remain; 
 }
 
 pub fn maybeDeepFingerTreeButDigit0(e: *Element, buffer: []Element, use_first: bool, left: *Element, inner: *Element, right: *Element, depth: usize) ![]Element {
@@ -1919,7 +1920,7 @@ pub fn maybeDeepFingerTreeButDigit0(e: *Element, buffer: []Element, use_first: b
                 d.Deep.right = @intFromPtr(new_right); 
                 d.Deep.finger_tree = @intFromPtr(inner); 
                 e.FingerTree.t = Element.DeepT; 
-                e.FingerTree.p = @intFromPtr(d); 
+                e.FingerTree.ptr = @intFromPtr(d); 
                 e.FingerTree.size = deepGetSize(d, depth); 
             }
         } else {
@@ -1957,7 +1958,7 @@ pub fn maybeDeepFingerTreeButDigit0(e: *Element, buffer: []Element, use_first: b
                 d.Deep.right = @intFromPtr(new_right); 
                 d.Deep.finger_tree = @intFromPtr(inner); 
                 e.FingerTree.t = Element.DeepT; 
-                e.FingerTree.p = @intFromPtr(d); 
+                e.FingerTree.ptr = @intFromPtr(d); 
                 e.FingerTree.size = deepGetSize(d, depth); 
             } 
         } else {
@@ -1995,6 +1996,7 @@ pub fn split(left: *Element, right: *Element, mid: *usize, inner_idx: *usize, bu
         unreachable; 
     } else if (origin.FingerTree.t == Element.SingleT) {
         mid.* = origin.FingerTree.ptr; 
+        inner_idx.* = index; 
         empty(left); 
         empty(right); 
     } else if (origin.FingerTree.t == Element.DeepT) {
@@ -2008,7 +2010,7 @@ pub fn split(left: *Element, right: *Element, mid: *usize, inner_idx: *usize, bu
             var l_four: Element = undefined; 
             var r_four: Element = undefined; 
             remain = try fourSplit(&l_four, &r_four, mid, inner_idx, remain, use_first, d_left.*, index, depth);  
-            remain = try fourToFingerTree(left, remain, l_four, depth); 
+            remain = try fourToFingerTree(left, remain, use_first, l_four, depth); 
             var r_four0: *Element = &r_four; 
             if (r_four.Four[0] != 0) {
                 remain = try allocSingle(remain, use_first, &r_four0); 
@@ -2032,7 +2034,7 @@ pub fn split(left: *Element, right: *Element, mid: *usize, inner_idx: *usize, bu
             var r0: Element = undefined; 
             remain = try fourSplit(&l, &r0, mid, inner_idx, remain, use_first, xs, inner_idx0, depth); 
             var new_l: *Element = &l; 
-            var new_r = &r; 
+            var new_r = &r0; 
             if (l.Four[0] != 0) {
                 remain = try allocSingle(remain, use_first, &new_l); 
                 new_l.* = l; 
@@ -2049,14 +2051,36 @@ pub fn split(left: *Element, right: *Element, mid: *usize, inner_idx: *usize, bu
             var l_four: Element = undefined; 
             var r_four: Element = undefined; 
             remain = try fourSplit(&l_four, &r_four, mid, inner_idx, remain, use_first, d_right.*, r, depth);  
-            remain = try fourToFingerTree(right, remain, r_four, depth); 
+            remain = try fourToFingerTree(right, remain, use_first, r_four, depth); 
             var l_four0: *Element = &l_four; 
             if (l_four.Four[0] != 0) {
                 remain = try allocSingle(remain, use_first, &l_four0); 
                 l_four0.* = l_four; 
             }
-            remain = try maybeDeepFingerTreeButDigit0(right, remain, use_first, d_left, d_ft, l_four0, depth); 
+            remain = try maybeDeepFingerTreeButDigit0(left, remain, use_first, d_left, d_ft, l_four0, depth); 
         }
     } 
     return remain; 
+}
+
+test {
+    const buf_base: []Element = try std.testing.allocator.alloc(Element, 100);
+    defer std.testing.allocator.free(buf_base); 
+    var buf: []Element = buf_base; 
+    single(&buf[0], 10, 0); 
+    single(&buf[1], 11, 0); 
+    var rst: usize = undefined; 
+    var inner: usize = undefined; 
+    buf = try split(&buf[2], &buf[3], &rst, &inner, buf[4..], true, buf[0], 0, 0); 
+    std.log.warn("split rst: {}, inner: {x}, lsize: {}, rsize: {}", .{ rst, inner, buf_base[2].FingerTree.size, buf_base[3].FingerTree.size }); 
+    const m1 = &buf[0]; 
+    buf = try merge(m1, buf[1..], true, buf_base[0], buf_base[1], 0); 
+    const m2 = &buf[0]; 
+    buf = try merge(m2, buf[1..], true, m1.*, m1.*, 0); 
+    std.log.warn("size of m2: {}", .{ m2.FingerTree.size }); 
+    const buf1 = buf[0..2]; 
+    buf = try split(&buf[0], &buf[1], &rst, &inner, buf[2..], true, m2.*, 3, 0); 
+    std.log.warn("rst: {}, inner: {}", .{ rst, inner }); 
+    std.log.warn("l size: {}, r size: {}", .{ buf1[0].FingerTree.size, buf1[1].FingerTree.size }); 
+    std.log.warn("l[0]: {}; l[1]: {}; l[2]: {}", .{ get(buf1[0], 0, 0), get(buf1[0], 1, 0), get(buf1[0], 2, 0) }); 
 }
