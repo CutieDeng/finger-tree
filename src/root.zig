@@ -25,7 +25,7 @@ pub const Element = extern union {
 pub fn empty(e: *Element) void {
     e.* = Element {
         .FingerTree = .{ 
-            .t = 0, 
+            .t = Element.EmptyT, 
             .ptr = 0, 
             .size = 0, 
         }
@@ -35,7 +35,7 @@ pub fn empty(e: *Element) void {
 pub fn single(e: *Element, value: usize, depth: usize) void {
     e.* = Element {
         .FingerTree = .{ 
-            .t = 1, 
+            .t = Element.SingleT, 
             .ptr = value, 
             .size = maybeThreeCalcSize(value, depth), 
         }
@@ -910,14 +910,33 @@ pub fn fourModify(e: *Element, buffer: []Element, use_first: bool, origin: Eleme
     }
 }
 
-pub fn threeModify(e: *Element, buffer: []Element, use_first: bool, origin: Element, idx: usize, depth: usize) ![]Element {
-    _ = origin; // autofix
-    _ = e; // autofix
-    _ = buffer; // autofix
-    _ = use_first; // autofix
-    _ = idx; // autofix
-    _ = depth; // autofix
-
+pub fn threeModify(e: *Element, buffer: []Element, use_first: bool, origin: Element, idx: usize, value: usize, depth: usize) ![]Element {
+    if (depth == 0) {
+        e.* = origin; 
+        e.Three.content[idx] = value; 
+        return buffer; 
+    } else {
+        var remain = buffer; 
+        var cum = idx; 
+        for (e.Three.content, 0..) |c, modi_idx| {
+            if (c == 0) {
+                unreachable; 
+            }
+            const p: *Element = @ptrFromInt(c); 
+            const s = maybeThreeCalcSize(c, depth); 
+            if (cum >= s) {
+                cum -= s; 
+            } else { 
+                var new_three: *Element = undefined; 
+                remain = try allocSingle(remain, use_first, &new_three); 
+                remain = try threeModify(new_three, remain, use_first, p.*, cum, value, depth - 1); 
+                e.* = origin; 
+                e.Three.content[modi_idx] = @intFromPtr(new_three); 
+                break; 
+            }
+        }
+        return remain; 
+    }
 }
 
 pub fn threeGet(e: *Element, idx: usize, depth: usize) usize {
@@ -1815,4 +1834,91 @@ test {
     std.debug.assert(fail == null); 
     std.log.warn("Remove successful, rst: {x}, but expect {}", .{ rst, 3 }); 
     std.debug.assert(rst == 3); 
+}
+
+pub fn split(left: *Element, right: *Element, buffer: []Element, use_first: bool, origin: Element, index: usize, depth: usize) ![]Element {
+    _ = use_first; // autofix
+    if (origin.FingerTree.t == Element.EmptyT) {
+        std.debug.assert(index == 0); 
+        empty(left); 
+        empty(right); 
+        return buffer; 
+    } else if (origin.FingerTree.t == Element.SingleT) {
+        // .. 
+        if (depth == 0) {
+            if (index == 0) {
+                empty(left); 
+                single(right, origin.FingerTree.ptr, depth); 
+            } else if (index == 1) {
+                single(left, origin.FingerTree.ptr, depth); 
+                empty(right); 
+            } 
+        } else {
+
+        }
+    } else if (origin.FingerTree.t == Element.DeepT) {
+        const deep: *Element = @ptrFromInt(origin.FingerTree.ptr); 
+        _ = deep; // autofix
+    } 
+    // const l_size = fourSize(origin.)
+}
+
+pub fn threeSplit(left: *Element, right: *Element, buffer: []Element, use_first: bool, origin: Element, index: usize, depth: usize, left_fail: *?usize, right_fail: *?usize) ![]Element {
+    if (index == 0) {
+        right.* = origin; 
+        left_fail.* = 0; 
+        right_fail.* = null; 
+        return buffer; 
+    } else if (index == origin.Three.size) {
+        left.* = origin; 
+        left_fail.* = null; 
+        right_fail.* = 0; 
+        return buffer; 
+    }
+    var mul: usize = index; 
+    var remain = buffer; 
+    for (origin.Three.content, 0..) |c, sp_idx| {
+        if (c == 0) {
+            unreachable; 
+        }
+        const s = maybeThreeCalcSize(c, depth); 
+        if (mul >= s) {
+            mul -= s; 
+        } else {
+            var l: Element = undefined; 
+            var r: Element = undefined; 
+            if (depth == 0) {
+                if (sp_idx == 1) {
+                    left_fail.* = origin.Three.content[0]; 
+                    if (origin.Three.size == 2) {
+                        right_fail.* = origin.Three.content[1]; 
+                    } else {
+                        right_fail.* = null; 
+                        right.Three.content[0] = origin.Three.content[1]; 
+                        right.Three.content[1] = origin.Three.content[2]; 
+                        right.Three.content[2] = 0; 
+                        threeFlushSize(right, depth); 
+                    }
+                } else if (sp_idx == 2) {
+                    std.debug.assert(origin.Three.size == 3); 
+                    left_fail.* = null; 
+                    left.Three.content[0] = origin.Three.content[0]; 
+                    left.Three.content[1] = origin.Three.content[1]; 
+                    left.Three.content[2] = 0; 
+                    right_fail.* = origin.Three.content[2]; 
+                    threeFlushSize(left, depth); 
+                } else {
+                    unreachable; 
+                }
+                return remain; 
+            } else {
+                const p: *Element = @ptrFromInt(c); 
+                var lf: ?usize = undefined; 
+                var rf: ?usize = undefined; 
+                remain = try threeSplit(&l, &r, remain, use_first, p.*, mul, depth - 1, &lf, &rf); 
+            }
+            break; 
+        }
+    }
+    return remain; 
 }
