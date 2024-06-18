@@ -511,14 +511,8 @@ pub fn innerPush(e: *Element, buffer: []Element, use_first: bool, origin: Elemen
         const left: *Element = @ptrFromInt(origin_d.Deep.left); 
         const right: *Element = @ptrFromInt(origin_d.Deep.right); 
         const inner_ft: *Element = @ptrFromInt(origin_d.Deep.finger_tree); 
-        const l_len = fourLength(left.*); 
-        _ = l_len; // autofix
-        const r_len = fourLength(right.*); 
         const l_size = fourSize(left, depth); 
-        const r_size = fourSize(right, depth); 
         const inner_size = inner_ft.FingerTree.size; 
-        _ = r_size; // autofix
-        _ = r_len; // autofix
         if (inner_ft.FingerTree.t != Element.EmptyT or (inner_ft.FingerTree.t == Element.EmptyT and depth == 0)) {
             if (idx >= l_size and idx <= l_size + inner_size) {
                 var new_inner_ft: *Element = undefined; 
@@ -756,14 +750,20 @@ pub fn threeInnerPush(e: *Element, e2: *?*Element, buffer: []Element, use_first:
     const inner_three: *Element = @ptrFromInt(origin.Three.content[idx2]); 
     remain = try threeInnerPush(e3, &buf, remain, use_first, inner_three.*, else_cnt, value, depth - 1); 
     if (buf) |b| {
-        _ = b; // autofix
         if (origin.Three.content[2] == 0) {
-            // Node 2 pattern 
             defer e2.* = null; 
             e.Three.content = origin.Three.content; 
-            @memcpy(e.Three.content[0..idx2], origin.Three.content[0..idx2]); 
-            e.Three.content[idx2] = value; 
-            @memcpy(e.Three.content[(idx2+1)..3], origin.Three.content[idx2..2]); 
+            e.Three.content[idx2] = @intFromPtr(e3); 
+            e.Three.content[idx2+1] = @intFromPtr(b); 
+            if (idx2 == 0) {
+                e.Three.content[2] = origin.Three.content[1]; 
+            } else if (idx2 == 1) {
+                e.Three.content[0] = origin.Three.content[0]; 
+            } else {
+                unreachable; 
+            }
+            // @memcpy(e.Three.content[0..idx2], origin.Three.content[0..idx2]); 
+            // @memcpy(e.Three.content[(idx2+2)..3], origin.Three.content[idx2+1..2]); 
             e.Three.size += 1; 
         } else {
             var newly : *Element = undefined; 
@@ -773,7 +773,7 @@ pub fn threeInnerPush(e: *Element, e2: *?*Element, buffer: []Element, use_first:
             var base_idx: usize = 0; 
             for (0..4) |v| {
                 if (v == idx2 + 1) {
-                    base[base_idx] = value; 
+                    base[base_idx] = @intFromPtr(b); 
                     base_idx += 1; 
                 }
                 if (v != 3) {
@@ -1040,8 +1040,6 @@ pub fn push(e: *Element, buffer: []Element, use_first: bool, origin: Element, va
 }
 
 test {
-    _ = Element; 
-    _ = empty; 
     var buffer: [10]Element = undefined; 
     var e: Element = undefined; 
     empty(&e); 
