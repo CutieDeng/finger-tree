@@ -1,24 +1,45 @@
 const std = @import("std");
 
+const lib = @import("root.zig"); 
+
 pub fn main() !void {
-    // Prints to stderr (it's a shortcut based on `std.io.getStdErr()`)
-    std.debug.print("All your {s} are belong to us.\n", .{"codebase"});
-
-    // stdout is for the actual output of your application, for example if you
-    // are implementing gzip, then only the compressed bytes should be sent to
-    // stdout, not any debugging messages.
-    const stdout_file = std.io.getStdOut().writer();
-    var bw = std.io.bufferedWriter(stdout_file);
-    const stdout = bw.writer();
-
-    try stdout.print("Run `zig build test` to run the tests.\n", .{});
-
-    try bw.flush(); // don't forget to flush!
+    var gpa = std.heap.GeneralPurposeAllocator(.{}){}; 
+    defer _ = gpa.deinit(); 
+    const allocator = gpa.allocator(); 
+    const buffer: []lib.Element = try allocator.alloc(lib.Element, 102400); 
+    defer allocator.free(buffer); 
+    const UsizeArrayList = std.ArrayList(usize); 
+    var array_list = UsizeArrayList.init(allocator); 
+    defer array_list.deinit(); 
+    var remain = buffer; 
+    var ft: lib.Element = undefined; 
+    lib.empty(&ft); 
+    var tmp: lib.Element = undefined; 
+    for (0..20) |i| {
+        std.log.debug("push 4 with {} times. ", .{ i }); 
+        lib.check(ft, 0); 
+        remain = try lib.push(&tmp, remain, true, ft, 4, 0, true); 
+        ft = tmp; 
+        std.log.debug("now size: {}", .{ ft.FingerTree.size }); 
+    }
 }
 
-test "simple test" {
-    var list = std.ArrayList(i32).init(std.testing.allocator);
-    defer list.deinit(); // try commenting this out and see if zig detects the memory leak!
-    try list.append(42);
-    try std.testing.expectEqual(@as(i32, 42), list.pop());
+test {
+    const allocator = std.testing.allocator; 
+    const buffer: []lib.Element = try allocator.alloc(lib.Element, 102400); 
+    defer allocator.free(buffer); 
+    const UsizeArrayList = std.ArrayList(usize); 
+    var array_list = UsizeArrayList.init(allocator); 
+    defer array_list.deinit(); 
+    var remain = buffer; 
+    var ft: lib.Element = undefined; 
+    var tmp: lib.Element = undefined; 
+    lib.empty(&ft); 
+    for (0..10) |i| {
+        std.log.debug("push 4 with {} times. ", .{ i }); 
+        lib.check(ft, 0); 
+        remain = try lib.push(&tmp, remain, true, ft, 4, 0, true); 
+        ft = tmp; 
+    }
+    std.debug.print("size: {}\n", .{ ft.FingerTree.size }); 
 }

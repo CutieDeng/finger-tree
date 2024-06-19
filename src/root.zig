@@ -315,11 +315,16 @@ pub fn createDeep(e: *Element, buffer: []Element, use_first: bool) ![]Element {
     var deep: *Element = undefined; 
     remain = try allocSingle(remain, use_first, &deep); 
     var left2: [2]*Element = undefined; 
-    for (&left2) |*l| {
+    for (left2[0..]) |*l| {
         remain = try allocSingle(remain, use_first, l); 
     }
     var emptyE: *Element = undefined; 
     remain = try allocSingle(remain, use_first, &emptyE); 
+    std.log.warn("e: ptr {x}", .{ @intFromPtr(e) }); 
+    std.log.warn("d: ptr {x}", .{ @intFromPtr(deep) }); 
+    std.log.warn("left: ptr {x}", .{ @intFromPtr(left2[0]) }); 
+    std.log.warn("right: ptr {x}", .{ @intFromPtr(left2[1]) }); 
+    std.log.warn("empty: ptr {x}", .{ @intFromPtr(emptyE) }); 
     empty(emptyE); 
     deep.Deep.left = @intFromPtr(left2[0]); 
     deep.Deep.right = @intFromPtr(left2[1]); 
@@ -348,6 +353,9 @@ pub fn allocSingle(buffer: []Element, use_first: bool, rst: **Element) ![]Elemen
 pub fn maybeThreeCalcSize(value: usize, depth: usize) usize {
     if (depth == 0) {
         return 1; 
+    }
+    if (value % std.meta.alignment(Element) != 0) {
+        std.log.warn("value: {}, in depth {}?", .{ value, depth }); 
     }
     const vptr : *Element = @ptrFromInt(value); 
     return vptr.Three.size; 
@@ -983,11 +991,11 @@ pub fn push(e: *Element, buffer: []Element, use_first: bool, origin: Element, va
         return remain; 
     }
     std.debug.assert(origin.FingerTree.t == Element.DeepT); 
-    // check right ~ 
     const deep: *Element = @ptrFromInt(origin.FingerTree.ptr); 
+    const inner: *Element = @ptrFromInt(deep.Deep.finger_tree); 
     const right_ptr: *Element = @ptrFromInt(if (right) deep.Deep.right else deep.Deep.left); 
     const len_of_right = fourLength(right_ptr.*); 
-    // just adjust it 
+    std.log.debug("len of right: {}", .{ len_of_right }); 
     if (len_of_right < 4) {
         var new_right: *Element = undefined; 
         var new_deep: *Element = undefined; 
@@ -1004,16 +1012,16 @@ pub fn push(e: *Element, buffer: []Element, use_first: bool, origin: Element, va
         else 
             new_deep.Deep.left) 
                 = @intFromPtr(new_right); 
-        e.* = origin; 
+        e.FingerTree.t = Element.DeepT; 
         e.FingerTree.ptr = @intFromPtr(new_deep); 
         e.FingerTree.size = origin.FingerTree.size + maybeThreeCalcSize(value, depth); 
     } else {
         var new_three: *Element = undefined; 
-        var new_single: *Element = undefined; 
+        var new_inner: *Element = undefined; 
         var new_right: *Element = undefined; 
         var new_deep: *Element = undefined; 
         remain = try allocSingle(remain, use_first, &new_three); 
-        remain = try allocSingle(remain, use_first, &new_single); 
+        remain = try allocSingle(remain, use_first, &new_inner); 
         remain = try allocSingle(remain, use_first, &new_right); 
         remain = try allocSingle(remain, use_first, &new_deep); 
         @memcpy(&new_three.Three.content, right_ptr.Four[0..3]); 
@@ -1021,22 +1029,66 @@ pub fn push(e: *Element, buffer: []Element, use_first: bool, origin: Element, va
             std.mem.swap(usize, &new_three.Three.content[0], &new_three.Three.content[2]); 
         }
         threeFlushSize(new_three, depth); 
-        right_ptr.Four[0] = right_ptr.Four[3]; 
-        right_ptr.Four[1] = value; 
-        right_ptr.Four[2] = 0; 
-        single(new_single, @intFromPtr(new_three), depth + 1); 
-        new_deep.* = deep.*; 
-        new_deep.Deep.finger_tree = @intFromPtr(new_single); 
+        new_right.Four[0] = right_ptr.Four[3]; 
+        new_right.Four[1] = value; 
+        new_right.Four[2] = 0; 
+        remain = try push(new_inner, remain, use_first, inner.*, @intFromPtr(new_three), depth + 1, right); 
+        new_deep.Deep = deep.Deep; 
+        new_deep.Deep.finger_tree = @intFromPtr(new_inner); 
         (if (right) 
             new_deep.Deep.right
         else 
             new_deep.Deep.left) 
                 = @intFromPtr(new_right); 
-        e.* = origin; 
+        e.FingerTree.t = Element.DeepT; 
         e.FingerTree.ptr = @intFromPtr(new_deep);
         e.FingerTree.size = origin.FingerTree.size + maybeThreeCalcSize(value, depth); 
     }
     return remain; 
+}
+
+test {
+    std.log.warn("similar test", .{}); 
+    var buffer: [10]Element = undefined; 
+    var e: Element = undefined; 
+    var remain: []Element = buffer[0..];
+    empty(&e); 
+    remain = try push(&e, remain, true, e, 1, 0, true); 
+    remain = try push(&e, remain, true, e, 1, 0, true); 
+    remain = try push(&e, remain, true, e, 1, 0, true); 
+    std.log.warn("similar test end", .{}); 
+}
+
+test {
+    std.log.warn("similar test3", .{}); 
+    var buffer: [10]Element = undefined; 
+    var e: Element = undefined; 
+    var remain: []Element = buffer[0..];
+    empty(&e); 
+    var tmp: Element = undefined; 
+    remain = try push(&tmp, remain, true, e, 1, 0, true); 
+    e = tmp; 
+    remain = try push(&tmp, remain, true, e, 1, 0, true); 
+    e = tmp; 
+    remain = try push(&tmp, remain, true, e, 1, 0, true); 
+    e = tmp; 
+    std.log.warn("similar test3 end", .{}); 
+}
+
+test {
+    std.log.warn("similar test2", .{}); 
+    var buffer: [10]Element = undefined; 
+    const a0 = &buffer[0]; 
+    var remain: []Element = buffer[1..];
+    empty(a0); 
+    const b0 = &remain[0]; 
+    remain = try push(b0, remain[1..], true, a0.*, 1, 0, true); 
+    const c0 = &remain[0]; 
+    remain = try push(c0, remain[1..], true, b0.*, 1, 0, true); 
+    const d0 = &remain[0]; 
+    remain = try push(d0, remain[1..], true, c0.*, 1, 0, true); 
+    std.log.warn("d0 size: {}", .{ d0.FingerTree.size }); 
+    std.log.warn("similar test2 end", .{}); 
 }
 
 test {
@@ -2083,4 +2135,63 @@ test {
     std.log.warn("rst: {}, inner: {}", .{ rst, inner }); 
     std.log.warn("l size: {}, r size: {}", .{ buf1[0].FingerTree.size, buf1[1].FingerTree.size }); 
     std.log.warn("l[0]: {}; l[1]: {}; l[2]: {}", .{ get(buf1[0], 0, 0), get(buf1[0], 1, 0), get(buf1[0], 2, 0) }); 
+}
+
+pub fn threeCheck(e: Element, depth: usize) void {
+    var cum: usize = 0; 
+    for (e.Three.content) |f| {
+        if (f == 0) break; 
+        cum += maybeThreeCalcSize(f, depth); 
+    }
+    if (cum == e.Three.size) {
+        std.log.debug("check depth {} node", .{ depth }); 
+    } else {
+        std.log.warn("check depth {} node, but ft.size = {}; but actaul size = {}", .{ depth, e.Three.size, cum }); 
+    }
+}
+
+pub fn check(e: Element, depth: usize) void {
+    if (e.FingerTree.t == Element.EmptyT) {
+        if (e.FingerTree.size != 0) {
+            std.log.warn("check depth {} tree, empty but size = {}", .{ depth, e.FingerTree.size });
+        } else {
+            std.log.debug("check depth {} tree: empty", .{ depth }); 
+        }
+        return ; 
+    }
+    if (e.FingerTree.t == Element.SingleT) {
+        const s = maybeThreeCalcSize(e.FingerTree.ptr, depth); 
+        if (s == e.FingerTree.size) {
+            std.log.debug("check depth {} tree: single", .{ depth }); 
+        } else {
+            std.log.warn("check depth {} tree: single, expect size (from node) {}, but get {} in ft self", .{ depth, s, e.FingerTree.size }); 
+        }
+        if (depth != 0) {
+            const p : *Element = @ptrFromInt(e.FingerTree.ptr); 
+            threeCheck(p.*, depth - 1); 
+        }
+        return ; 
+    }
+    std.debug.assert(e.FingerTree.t == Element.DeepT); 
+    const d: *Element = @ptrFromInt(e.FingerTree.ptr); 
+    const inner: *Element = @ptrFromInt(d.Deep.finger_tree); 
+    if (depth != 0) {
+        std.log.debug("check depth {} tree: deep start", .{ depth }); 
+        defer std.log.debug("check depth {} tree: deep end", .{ depth }); 
+        const l: *Element = @ptrFromInt(d.Deep.left); 
+        const r: *Element = @ptrFromInt(d.Deep.right); 
+        for (l.Four) |f| {
+            if (f == 0) break; 
+            const the_three: *Element = @ptrFromInt(f); 
+            threeCheck(the_three.*, depth - 1); 
+        } 
+        check(inner.*, depth + 1); 
+        for (r.Four) |f| {
+            if (f == 0) break; 
+            const the_three: *Element = @ptrFromInt(f); 
+            threeCheck(the_three.*, depth - 1); 
+        } 
+    } else {
+        check(inner.*, depth + 1);     
+    }
 }
