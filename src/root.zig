@@ -320,11 +320,13 @@ pub fn createDeep(e: *Element, buffer: []Element, use_first: bool) ![]Element {
     }
     var emptyE: *Element = undefined; 
     remain = try allocSingle(remain, use_first, &emptyE); 
-    std.log.warn("e: ptr {x}", .{ @intFromPtr(e) }); 
-    std.log.warn("d: ptr {x}", .{ @intFromPtr(deep) }); 
-    std.log.warn("left: ptr {x}", .{ @intFromPtr(left2[0]) }); 
-    std.log.warn("right: ptr {x}", .{ @intFromPtr(left2[1]) }); 
-    std.log.warn("empty: ptr {x}", .{ @intFromPtr(emptyE) }); 
+    if (false) {
+        std.log.warn("e: ptr {x}", .{ @intFromPtr(e) }); 
+        std.log.warn("d: ptr {x}", .{ @intFromPtr(deep) }); 
+        std.log.warn("left: ptr {x}", .{ @intFromPtr(left2[0]) }); 
+        std.log.warn("right: ptr {x}", .{ @intFromPtr(left2[1]) }); 
+        std.log.warn("empty: ptr {x}", .{ @intFromPtr(emptyE) }); 
+    }
     empty(emptyE); 
     deep.Deep.left = @intFromPtr(left2[0]); 
     deep.Deep.right = @intFromPtr(left2[1]); 
@@ -828,7 +830,7 @@ pub fn modify(e: *Element, buffer: []Element, use_first: bool, origin: Element, 
             var new: *Element = undefined; 
             const three: *Element = @ptrFromInt(origin.FingerTree.ptr); 
             remain = try allocSingle(remain, use_first, &new); 
-            remain = try threeModify(new, remain, use_first, three, idx, value, depth - 1); 
+            remain = try threeModify(new, remain, use_first, three.*, idx, value, depth - 1); 
             e.FingerTree.ptr = @intFromPtr(new); 
             e.FingerTree.size = origin.FingerTree.size; 
             e.FingerTree.t = Element.SingleT; 
@@ -850,7 +852,7 @@ pub fn modify(e: *Element, buffer: []Element, use_first: bool, origin: Element, 
             remain = try allocSingle(remain, use_first, &new_deep); 
             var fourr: Element = left.*; 
             const fourr_len = fourLength(fourr); 
-            std.mem.reverse(usize, fourr[0..fourr_len]); 
+            std.mem.reverse(usize, fourr.Four[0..fourr_len]); 
             remain = try fourModify(new_four, remain, use_first, fourr, idx, value, depth); 
             std.mem.reverse(usize, new_four.Four[0..fourr_len]); 
             new_deep.Deep.left = @intFromPtr(new_four); 
@@ -912,13 +914,14 @@ pub fn fourModify(e: *Element, buffer: []Element, use_first: bool, origin: Eleme
         var new_three: *Element = undefined; 
         const now_three: *Element = @ptrFromInt(e.Four[v]); 
         remain = try allocSingle(remain, use_first, &new_three); 
-        remain = try threeModify(new_three, remain, use_first, now_three.*, cumul, depth); 
+        remain = try threeModify(new_three, remain, use_first, now_three.*, cumul, value, depth - 1); 
         e.Four[v] = @intFromPtr(new_three); 
         return remain; 
     }
 }
 
 pub fn threeModify(e: *Element, buffer: []Element, use_first: bool, origin: Element, idx: usize, value: usize, depth: usize) ![]Element {
+    std.debug.assert(idx < origin.Three.size); 
     if (depth == 0) {
         e.* = origin; 
         e.Three.content[idx] = value; 
@@ -926,9 +929,12 @@ pub fn threeModify(e: *Element, buffer: []Element, use_first: bool, origin: Elem
     } else {
         var remain = buffer; 
         var cum = idx; 
-        for (e.Three.content, 0..) |c, modi_idx| {
+        for (origin.Three.content, 0..) |c, modi_idx| {
             if (c == 0) {
                 unreachable; 
+            }
+            if (false and c % 8 != 0) {
+                std.log.warn("c {x}, in idx {}, value {}, depth {}", .{ c, idx, value, depth }); 
             }
             const p: *Element = @ptrFromInt(c); 
             const s = maybeThreeCalcSize(c, depth); 
@@ -995,7 +1001,6 @@ pub fn push(e: *Element, buffer: []Element, use_first: bool, origin: Element, va
     const inner: *Element = @ptrFromInt(deep.Deep.finger_tree); 
     const right_ptr: *Element = @ptrFromInt(if (right) deep.Deep.right else deep.Deep.left); 
     const len_of_right = fourLength(right_ptr.*); 
-    std.log.debug("len of right: {}", .{ len_of_right }); 
     if (len_of_right < 4) {
         var new_right: *Element = undefined; 
         var new_deep: *Element = undefined; 
