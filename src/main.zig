@@ -16,8 +16,9 @@ pub fn main() !void {
     lib.empty(&ft); 
     var tmp: lib.Element = undefined; 
     for (0..500) |_| {
-        remain = try lib.push(&tmp, remain, true, ft, 7, 0, true); 
-        ft = tmp; 
+        remain = try lib.push(&ft, remain, true, ft, 7, 0, true); 
+        _ = &tmp; 
+        // ft = tmp; 
     }
     for (0..500) |i| {
         const rst = lib.get(ft, i, 0); 

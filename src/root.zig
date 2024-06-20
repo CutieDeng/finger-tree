@@ -973,17 +973,131 @@ pub fn threeGet(e: *Element, idx: usize, depth: usize) usize {
     unreachable; 
 }
 
+pub fn push2(e: *Element, buffer: []Element, use_first: bool, origin: Element, value0: usize, value1: usize, depth: usize, right: bool) ![]Element {
+    std.debug.assert(value0 != 0); 
+    std.debug.assert(value1 != 0); 
+    var remain = buffer; 
+    var inner_deep: *Element = undefined; 
+    var emp: *Element = undefined; 
+    var left: *Element = undefined; 
+    var rright: *Element = undefined; 
+    if (origin.FingerTree.t == Element.EmptyT) {
+        remain = try allocSingle(remain, use_first, &inner_deep); 
+        remain = try allocSingle(remain, use_first, &left); 
+        remain = try allocSingle(remain, use_first, &emp); 
+        remain = try allocSingle(remain, use_first, &rright); 
+        if (right) {
+            left.Four[0] = value0; 
+            rright.Four[0] = value1; 
+        } else {
+            left.Four[0] = value1; 
+            rright.Four[0] = value0; 
+        }
+        left.Four[1] = 0; 
+        rright.Four[1] = 0; 
+        empty(emp); 
+        inner_deep.Deep.finger_tree = @intFromPtr(emp); 
+        inner_deep.Deep.left = @intFromPtr(left); 
+        inner_deep.Deep.right = @intFromPtr(rright); 
+        e.FingerTree.size = maybeThreeCalcSize(value0, depth) + maybeThreeCalcSize(value1, depth); 
+        e.FingerTree.ptr = @intFromPtr(inner_deep); 
+        e.FingerTree.t = Element.DeepT; 
+        return remain; 
+    }
+    if (origin.FingerTree.t == Element.SingleT) {
+        remain = try allocSingle(remain, use_first, &inner_deep); 
+        remain = try allocSingle(remain, use_first, &left); 
+        remain = try allocSingle(remain, use_first, &emp); 
+        remain = try allocSingle(remain, use_first, &rright); 
+        if (right) {
+            left.Four[0] = origin.FingerTree.ptr; 
+            left.Four[1] = 0; 
+            rright.Four[0] = value0; 
+            rright.Four[1] = value1; 
+            rright.Four[2] = 0; 
+        } else {
+            left.Four[0] = origin.FingerTree.size; 
+            left.Four[1] = 0; 
+            rright.Four[0] = value0; 
+            rright.Four[1] = value1; 
+            rright.Four[2] = 0; 
+        }
+        empty(emp); 
+        inner_deep.Deep.finger_tree = @intFromPtr(emp); 
+        inner_deep.Deep.left = @intFromPtr(left); 
+        inner_deep.Deep.right = @intFromPtr(rright); 
+        e.FingerTree.size = origin.FingerTree.size + maybeThreeCalcSize(value0, depth) + maybeThreeCalcSize(value1, depth); 
+        e.FingerTree.ptr = @intFromPtr(inner_deep); 
+        e.FingerTree.t = Element.DeepT; 
+        return remain; 
+    }
+    std.debug.assert(origin.FingerTree.t == Element.DeepT); 
+    const deep: *Element = @ptrFromInt(origin.FingerTree.ptr); 
+    const old_rright: *Element = @ptrFromInt(if (right) deep.Deep.right else deep.Deep.left); 
+    const old_left: *Element = @ptrFromInt(if (right) deep.Deep.left else deep.Deep.right);  
+    _ = old_left; // autofix
+    const old_inner: *Element = @ptrFromInt(deep.Deep.finger_tree); 
+    const rright_len = fourLength(old_rright.*); 
+    remain = try allocSingle(remain, use_first, &inner_deep); 
+    remain = try allocSingle(remain, use_first, &rright); 
+    if (rright_len <= 2) {
+        @memcpy(rright.Four[0..rright_len], old_rright.Four[0..rright_len]); 
+        rright.Four[rright_len] = value0; 
+        rright.Four[rright_len + 1] = value0; 
+        if (rright_len == 1) {
+            rright.Four[rright_len + 2] = 0; 
+        }
+        inner_deep.Deep = deep.Deep; 
+        (if (right) inner_deep.Deep.right else inner_deep.Deep.left) = @intFromPtr(rright); 
+        e.FingerTree.size = origin.FingerTree.size + maybeThreeCalcSize(value0, depth) + maybeThreeCalcSize(value1, depth); 
+        e.FingerTree.ptr = @intFromPtr(inner_deep); 
+        e.FingerTree.t = Element.DeepT; 
+    } else { 
+        var new_three: *Element = undefined; 
+        remain = try allocSingle(remain, use_first, &emp); 
+        remain = try allocSingle(remain, use_first, &new_three); 
+        @memcpy(new_three.Three.content[0..], old_rright.Four[0..3]); 
+        if (!right) {
+            std.mem.reverse(usize, new_three.Three.content); 
+        }
+        remain = try push(emp, remain, use_first, old_inner.*, @intFromPtr(new_three), depth + 1, right); 
+        if (rright_len == 3) {
+            rright.Four[0] = value0; 
+            rright.Four[1] = value1; 
+            rright.Four[2] = 0; 
+        } else {
+            rright.Four[0] = old_rright.Four[3]; 
+            rright.Four[1] = value0; 
+            rright.Four[2] = value1; 
+            rright.Four[3] = 0; 
+        }
+        inner_deep.Deep = deep.Deep; 
+        inner_deep.Deep.finger_tree = @intFromPtr(emp); 
+        (if (right) inner_deep.Deep.right else inner_deep.Deep.left) = @intFromPtr(rright); 
+        e.FingerTree.size = origin.FingerTree.size + maybeThreeCalcSize(value0, depth) + maybeThreeCalcSize(value1, depth); 
+        e.FingerTree.ptr = @intFromPtr(inner_deep); 
+        e.FingerTree.t = Element.DeepT; 
+    }
+    return remain; 
+}
+
 pub fn push(e: *Element, buffer: []Element, use_first: bool, origin: Element, value: usize, depth: usize, right: bool) ![]Element {
+    std.debug.assert(value != 0);
     if (origin.FingerTree.t == Element.EmptyT) {
         single(e, value, depth); 
         return buffer; 
     }
     var remain = buffer; 
     if (origin.FingerTree.t == Element.SingleT) {
-        remain = try createDeep(e, remain, use_first); 
-        const innerDeep: *Element = @ptrFromInt(e.FingerTree.ptr); 
-        const left: *Element = @ptrFromInt(innerDeep.Deep.left); 
-        const rright: *Element = @ptrFromInt(innerDeep.Deep.right); 
+        var inner_deep: *Element = undefined; 
+        var emp: *Element = undefined; 
+        var left: *Element = undefined; 
+        var rright: *Element = undefined; 
+        remain = try allocSingle(remain, use_first, &inner_deep); 
+        remain = try allocSingle(remain, use_first, &left); 
+        remain = try allocSingle(remain, use_first, &emp); 
+        remain = try allocSingle(remain, use_first, &rright); 
+        empty(emp); 
         if (right) {
             left.Four[0] = origin.FingerTree.ptr; 
             rright.Four[0] = value; 
@@ -993,7 +1107,12 @@ pub fn push(e: *Element, buffer: []Element, use_first: bool, origin: Element, va
         }
         left.Four[1] = 0; 
         rright.Four[1] = 0; 
+        inner_deep.Deep.left = @intFromPtr(left); 
+        inner_deep.Deep.finger_tree = @intFromPtr(emp); 
+        inner_deep.Deep.right = @intFromPtr(rright); 
         e.FingerTree.size = origin.FingerTree.size + maybeThreeCalcSize(value, depth); 
+        e.FingerTree.t = Element.DeepT; 
+        e.FingerTree.ptr = @intFromPtr(inner_deep); 
         return remain; 
     }
     std.debug.assert(origin.FingerTree.t == Element.DeepT); 
