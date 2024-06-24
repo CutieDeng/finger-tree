@@ -13,7 +13,8 @@ pub fn main() !void {
     defer array_list.deinit(); 
     var remain = buffer; 
     var ft: lib.Element = undefined; 
-    lib.empty(&ft); 
+    // lib.empty(&ft); 
+    ft = lib.EMPTY; 
     var tmp: lib.Element = undefined; 
     for (0..500) |_| {
         remain = try lib.push(&ft, remain, true, ft, 7, 0, true); 
@@ -88,7 +89,8 @@ test {
     var remain = buffer; 
     var ft: lib.Element = undefined; 
     var tmp: lib.Element = undefined; 
-    lib.empty(&ft); 
+    ft = lib.EMPTY; 
+    // lib.empty(&ft); 
     for (0..10) |i| {
         std.log.debug("push 4 with {} times. ", .{ i }); 
         lib.check(ft, 0); 
