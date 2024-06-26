@@ -8,9 +8,8 @@ const allocOne = lib.allocOne;
 const maybeThreeGetSize = lib.maybeThreeGetSize; 
 const fourLength = lib.fourLength; 
 const initSingle = lib.initSingle; 
-const threeSizeUpdateDirectly = lib.threeSizeUpdateDirectly; 
 
-const threeFlushSize = lib.threeFlushSize; 
+const threeSizeUpdateDirectly = lib.threeSizeUpdateDirectly; 
 const fourSize = lib.fourSize; 
 
 const fiveLength = lib.fiveLength; 
@@ -409,8 +408,8 @@ pub fn threeInnerPush(e: *Element, e2: *?*Element, buffer: []Element, use_first:
             newly.Three.content[0] = base[2]; 
             newly.Three.content[1] = base[3]; 
             newly.Three.content[2] = 0;  
-            threeFlushSize(e, depth); 
-            threeFlushSize(newly, depth); 
+            threeSizeUpdateDirectly(e, depth); 
+            threeSizeUpdateDirectly(newly, depth); 
         }
     } else {
         e2.* = null; 
@@ -520,7 +519,7 @@ pub fn innerPush(e: *Element, buffer: []Element, use_first: bool, origin: Elemen
                 remain = try allocOne(remain, use_first, &new_finger); 
                 @memcpy(new_three.Three.content[0..], rst[0..3]); 
                 std.mem.reverse(usize, new_three.Three.content[0..]); 
-                threeFlushSize(new_three, depth);
+                threeSizeUpdateDirectly(new_three, depth);
                 remain = try push(new_finger, remain, use_first, inner_ft.*, @intFromPtr(new_three), depth + 1, false); 
                 @memcpy(new_four.Four[0..2], rst[3..5]); 
                 new_four.Four[2] = 0; 
@@ -552,7 +551,7 @@ pub fn innerPush(e: *Element, buffer: []Element, use_first: bool, origin: Elemen
                 remain = try allocOne(remain, use_first, &new_three); 
                 remain = try allocOne(remain, use_first, &new_finger); 
                 @memcpy(new_three.Three.content[0..3], rst[0..3]); 
-                threeFlushSize(new_three, depth);
+                threeSizeUpdateDirectly(new_three, depth);
                 remain = try push(new_finger, remain, use_first, inner_ft.*, @intFromPtr(new_three), depth + 1, true); 
                 @memcpy(new_four.Four[0..2], rst[3..5]); 
                 new_four.Four[2] = 0; 
@@ -610,3 +609,38 @@ pub fn deepFourPush(rst: *[5]usize, buffer: []Element, use_first: bool, origin: 
     return remain; 
 }
 
+pub fn threePush(e: *Element, e2: *?*Element, buffer: []Element, use_first: bool, origin: Element, value: usize, depth: usize, right: bool) ![]Element {
+    const full = origin.Three.content[2] != 0; 
+    var buf: [4]usize = undefined; 
+    var remain = buffer; 
+    if (full) {
+        var back: *Element = undefined; 
+        remain = try allocOne(remain, use_first, &back); 
+        if (right) {
+            @memcpy(buf[0..3], origin.Three.content[0..]);  
+            buf[3] = value; 
+        } else {
+            @memcpy(buf[1..4], origin.Three.content[0..]);  
+            buf[0] = value; 
+        }
+        @memcpy(e.Three.content[0..2], buf[0..2]); 
+        e.Three.content[2] = 0; 
+        threeSizeUpdateDirectly(e, depth); 
+        @memcpy(back.Three.content[0..2], buf[2..4]); 
+        back.Three.content[2] = 0; 
+        threeSizeUpdateDirectly(back, depth); 
+        e2.* = back; 
+    } else {
+        if (right) {
+            @memcpy(buf[0..2], origin.Three.content[0..2]); 
+            buf[2] = value; 
+        } else {
+            @memcpy(buf[1..3], origin.Three.content[0..2]); 
+            buf[0] = value; 
+        }
+        @memcpy(e.Three.content[0..3], buf[0..3]); 
+        threeSizeUpdateDirectly(e, depth); 
+        e2.* = null; 
+    }
+    return remain; 
+}
