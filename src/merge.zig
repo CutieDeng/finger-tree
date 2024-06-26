@@ -13,7 +13,9 @@ const threeSizeUpdateDirectly = lib.threeSizeUpdateDirectly;
 const allocOne = lib.allocOne; 
 
 const fourLength = lib.fourLength; 
-const deepGetSize = lib.deepGetSize; 
+
+const size_calc = @import("size_calc.zig"); 
+const deepGetSize = size_calc.deepGetSize; 
 
 pub fn merge(e: *Element, buffer: []Element, use_first: bool, left: Element, right: Element, depth: usize) ![]Element {
     if (left.FingerTree.t == Element.EmptyT) {
@@ -57,12 +59,12 @@ pub fn merge(e: *Element, buffer: []Element, use_first: bool, left: Element, rig
             remain = try allocOne(remain, use_first, &left2); 
             remain = try allocOne(remain, use_first, &new_deep_fingertree); 
             remain = try allocOne(remain, use_first, &new_deep); 
-            remain = try push(left2, remain, use_first, left_deep_fingertree.*, @intFromPtr(new), depth + 1, true); 
+            remain = try push(left2, remain, use_first, left_deep_fingertree.*, @intFromPtr(new[0]), depth + 1, true); 
             remain = try merge(new_deep_fingertree, remain, use_first, left2.*, right_deep_fingertree.*, depth + 1); 
             new_deep.Deep.finger_tree = @intFromPtr(new_deep_fingertree); 
             new_deep.Deep.left = ldeep.Deep.left; 
             new_deep.Deep.right = rdeep.Deep.right; 
-            e.FingerTree.size = deepGetSize(new_deep, depth); 
+            e.FingerTree.size = deepGetSize(new_deep.*, depth); 
             e.FingerTree.ptr = @intFromPtr(new_deep); 
             e.FingerTree.t = Element.DeepT; 
         }, 
@@ -81,7 +83,7 @@ pub fn merge(e: *Element, buffer: []Element, use_first: bool, left: Element, rig
             remain = try allocOne(remain, use_first, &left_deep_finger); 
             remain = try allocOne(remain, use_first, &new_deep_fingertree); 
             remain = try allocOne(remain, use_first, &new_deep); 
-            remain = try push2(left_deep_finger, remain, use_first, left_deep_fingertree.*, @intFromPtr(new[0]), @intFromPtr(new[1]), true); 
+            remain = try push2(left_deep_finger, remain, use_first, left_deep_fingertree.*, @intFromPtr(new[0]), @intFromPtr(new[1]), depth + 1, true); 
             remain = try merge(new_deep_fingertree, remain, use_first, left_deep_finger.*, right_deep_fingertree.*, depth + 1); 
             new_deep.Deep.finger_tree = @intFromPtr(new_deep); 
             new_deep.Deep.left = ldeep.Deep.left; 

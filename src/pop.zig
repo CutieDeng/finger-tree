@@ -499,7 +499,7 @@ pub fn innerPop(e: *Element, buffer: []Element, use_first: bool, origin: Element
         new_right.Four[1] = 0; 
         new_deep.Deep.left = @intFromPtr(new_left); 
         new_deep.Deep.right = @intFromPtr(new_right); 
-        new_deep.Deep.finger_tree = @intFromPtr(deep.Deep.finger_tree); 
+        new_deep.Deep.finger_tree = deep.Deep.finger_tree; 
         e.FingerTree.size = origin.FingerTree.size - 1; 
         e.FingerTree.ptr = @intFromPtr(new_deep); 
         e.FingerTree.t = Element.DeepT; 
@@ -515,7 +515,7 @@ pub fn innerPop(e: *Element, buffer: []Element, use_first: bool, origin: Element
     new_right.Four[1] = 0; 
     new_deep.Deep.left = @intFromPtr(new_left); 
     new_deep.Deep.right = @intFromPtr(new_right); 
-    new_deep.Deep.finger_tree = @intFromPtr(deep.Deep.finger_tree); 
+    new_deep.Deep.finger_tree = deep.Deep.finger_tree; 
     e.FingerTree.size = origin.FingerTree.size - 1; 
     e.FingerTree.ptr = @intFromPtr(new_deep); 
     e.FingerTree.t = Element.DeepT; 
@@ -523,7 +523,7 @@ pub fn innerPop(e: *Element, buffer: []Element, use_first: bool, origin: Element
     return remain; 
 }
 
-pub fn threeInnerPop(e: *Element, buffer: []Element, use_first: bool, origin: Element, index: usize, depth: usize, pop_rst: *usize, fail_check: *?usize) ![]Element {
+pub fn threeInnerPop(e: *Element, buffer: []Element, use_first: bool, origin: Element, index: usize, depth: usize, pop_rst: *usize, fail_check: *?usize) lib.Error![]Element {
     std.debug.assert(index < origin.Three.size); 
     var back_four: Element = undefined; 
     @memcpy(back_four.Four[0..3], origin.Three.content[0..]); 
@@ -580,7 +580,7 @@ pub fn fourInnerPop(e: *Element, buffer: []Element, use_first: bool, origin: Ele
         var new_three0: *Element = undefined; 
         remain = try allocOne(remain, use_first, &new_three0); 
         new_three0.* = new_three; 
-        @memcpy(e.Four, origin.Four); 
+        e.Four = origin.Four; 
         e.Four[idx] = @intFromPtr(new_three0); 
         fail_check.* = null; 
         return remain; 

@@ -12,7 +12,10 @@ const initSingle = lib.initSingle;
 const threeSizeUpdateDirectly = lib.threeSizeUpdateDirectly; 
 const fourSize = lib.fourSize; 
 
-const fiveLength = lib.fiveLength; 
+const size_calc = @import("size_calc.zig"); 
+fn fiveLength(f: [5]usize ) usize {
+    return size_calc.anyLengthSentinel(&f); 
+}
 
 pub fn push(e: *Element, buffer: []Element, use_first: bool, origin: Element, value: usize, depth: usize, right: bool) ![]Element {
     std.debug.assert(value != 0);
@@ -69,9 +72,9 @@ pub fn push(e: *Element, buffer: []Element, use_first: bool, origin: Element, va
         else 
             new_deep.Deep.left) 
                 = @intFromPtr(new_right); 
-        e.FingerTree.t = Element.DeepT; 
-        e.FingerTree.ptr = @intFromPtr(new_deep); 
         e.FingerTree.size = origin.FingerTree.size + maybeThreeGetSize(value, depth); 
+        e.FingerTree.ptr = @intFromPtr(new_deep); 
+        e.FingerTree.t = Element.DeepT; 
     } else {
         var new_three: *Element = undefined; 
         var new_inner: *Element = undefined; 
@@ -97,9 +100,9 @@ pub fn push(e: *Element, buffer: []Element, use_first: bool, origin: Element, va
         else 
             new_deep.Deep.left) 
                 = @intFromPtr(new_right); 
-        e.FingerTree.t = Element.DeepT; 
-        e.FingerTree.ptr = @intFromPtr(new_deep);
         e.FingerTree.size = origin.FingerTree.size + maybeThreeGetSize(value, depth); 
+        e.FingerTree.ptr = @intFromPtr(new_deep);
+        e.FingerTree.t = Element.DeepT; 
     }
     return remain; 
 }
@@ -347,9 +350,9 @@ pub fn threeInnerPush(e: *Element, e2: *?*Element, buffer: []Element, use_first:
             remain = try allocOne(remain, use_first, &new_three2); 
             e2.* = new_three2; 
             var four: [4]usize = undefined; 
-            @memcpy(four[0..idx], origin.Three[0..idx]); 
+            @memcpy(four[0..idx], origin.Three.content[0..idx]); 
             four[idx] = value; 
-            @memcpy(four[(idx+1) .. 4], origin.Three[idx..3]); 
+            @memcpy(four[(idx+1) .. 4], origin.Three.content[idx..3]); 
             e.Three.content[0] = four[0]; 
             e.Three.content[1] = four[1]; 
             e.Three.content[2] = 0; 
