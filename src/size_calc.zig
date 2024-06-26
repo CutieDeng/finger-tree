@@ -43,3 +43,4 @@ pub fn threeSizeUpdateDirectly(e: *Element, depth: usize) void {
     }
     e.Three.size = size; 
 }
+

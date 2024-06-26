@@ -25,7 +25,7 @@ pub const Element = extern union {
 const init = @import("init.zig");
 pub const EMPTY = init.EMPTY; 
 pub const single = initSingle; 
-pub const initSingle = init.initSingle; 
+pub const initSingle = init.initSingle;
 
 const alloc = @import("alloc.zig"); 
 pub const allocSingle = alloc.allocOne; 
@@ -34,6 +34,7 @@ pub const allocOne = alloc.allocOne;
 const size_calc = @import("size_calc.zig"); 
 pub const maybeThreeGetSize = size_calc.maybeThreeGetSize; 
 pub const fourLength = size_calc.fourLength; 
+pub const fourSize = size_calc.fourSize; 
 
 const poplib = @import("pop.zig"); 
 pub const pop = poplib.pop; 
@@ -532,9 +533,6 @@ pub fn deepFourPush(rst: *[5]usize, buffer: []Element, use_first: bool, origin: 
     return remain; 
 }
 
-pub fn fourSize(e: *Element, depth: usize) usize {
-    return size_calc.fourSize(e.*, depth); 
-}
 
 pub fn threeInnerPush(e: *Element, e2: *?*Element, buffer: []Element, use_first: bool, origin: Element, idx: usize, value: usize, depth: usize) ![]Element {
     std.debug.assert(idx < origin.Three.size); 
@@ -678,8 +676,8 @@ pub fn modify(e: *Element, buffer: []Element, use_first: bool, origin: Element, 
         const deep: *Element = @ptrFromInt(origin.FingerTree.ptr); 
         const left: *Element = @ptrFromInt(deep.Deep.left); 
         const right: *Element = @ptrFromInt(deep.Deep.right); 
-        const left_size = fourSize(left, depth); 
-        const right_size = fourSize(right, depth); 
+        const left_size = fourSize(left.*, depth); 
+        const right_size = fourSize(right.*, depth); 
         const innerft: *Element = @ptrFromInt(deep.Deep.finger_tree); 
         const inner_size = innerft.FingerTree.size; 
         var new_deep: *Element = undefined; 
