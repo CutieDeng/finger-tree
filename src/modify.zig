@@ -130,6 +130,7 @@ pub fn fourModify(e: *Element, buffer: []Element, use_first: bool, origin: Eleme
             cumul -= lc;
         } else {
             idx0 = i;
+            break; 
         }
     }
     const v = idx0.?;

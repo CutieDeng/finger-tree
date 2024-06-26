@@ -22,12 +22,15 @@ pub fn main() !void {
     for (0..500) |v| {
         remain = try lib.push(&ft, remain, true, ft, v + 2, 0, true);
     }
+    for (0..500) |v| {
+        remain = try lib.modify(&ft, remain, true, ft, v, v + 20, 0); 
+    }
     for (0..500) |i| {
         const rst = lib.get(ft, i, 0);
-        if (rst != i + 2) {
+        if (rst != i + 20) {
             std.log.err("rst: {}; i: {}", .{ rst, i });
         } else {
-        //     std.log.debug("rst: {}; i: {}", .{ rst, i }); 
+            std.log.debug("rst: {}; i: {}", .{ rst, i }); 
         }
     }
 }
