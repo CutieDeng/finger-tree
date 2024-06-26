@@ -16,7 +16,8 @@ const threeSizeUpdateDirectly = lib.threeSizeUpdateDirectly;
 const allocOne = lib.allocOne; 
 
 const pushlib = @import("push.zig"); 
-const threeInnerPush = pushlib.threeInnerPush; 
+// const threeInnerPush = pushlib.threeInnerPush; 
+const threePush = pushlib.threePush; 
 
 pub fn pop(e: *Element, buffer: []Element, use_first: bool, origin: Element, depth: usize, right: bool, pop_rst: *usize) ![]Element {
     if (origin.FingerTree.t == Element.EmptyT) {
@@ -582,128 +583,146 @@ pub fn innerPop(e: *Element, buffer: []Element, use_first: bool, origin: Element
 
 pub fn threeInnerPop(e: *Element, buffer: []Element, use_first: bool, origin: Element, index: usize, depth: usize, pop_rst: *usize, fail_check: *?usize) ![]Element {
     std.debug.assert(index < origin.Three.size); 
+    var back_four: Element = undefined; 
+    @memcpy(back_four.Four[0..3], origin.Three.content[0..]); 
+    back_four.Four[3] = 0; 
+    var rst_as_four: Element = undefined; 
     var remain = buffer; 
-    if (depth == 0) {
-        if (origin.Three.content[2] == 0) {
-            if (index == 0) {
-                pop_rst.* = origin.Three.content[0]; 
-                fail_check.* = origin.Three.content[1]; 
-                return remain; 
-            } else if (index == 1) {
-                pop_rst.* = origin.Three.content[1]; 
-                fail_check.* = origin.Three.content[0]; 
-                return remain; 
-            }
-        } else {
-            pop_rst.* = origin.Three.content[index]; 
-            @memcpy(e.Three.content[0..index], origin.Three.content[0..index]); 
-            @memcpy(e.Three.content[index..2], origin.Three.content[index+1..]); 
-            e.Three.content[2] = 0; 
-            threeSizeUpdateDirectly(e, depth); 
-        } 
+    var fail: ?usize = undefined; 
+    remain = try fourInnerPop(&rst_as_four, remain, use_first, back_four, index, depth, pop_rst, &fail); 
+    std.debug.assert(fail == null); 
+    if (rst_as_four.Four[1] == 0) {
+        fail_check.* = rst_as_four.Four[0];         
     } else {
-        var cum = index; 
-        for (origin.Three.content, 0..) |c, the_idx| {
-            if (c == 0) {
-                unreachable; 
-            }
-            const p: *Element = @ptrFromInt(c); 
-            if (cum >= p.Three.size) {
-                cum -= p.Three.size; 
-            } else {
-                var buf: Element = undefined; 
-                var fail: ?usize = undefined; 
-                remain = try threeInnerPop(&buf, remain, use_first, p.*, cum, depth - 1, pop_rst, &fail); 
-                if (fail) |f| {
-                    std.debug.assert(f != 0); 
-                    var new_three0: *Element = undefined; 
-                    var new_three1: *Element = undefined; 
-                    if (the_idx == 0) {
-                        const nxt_three: *Element = @ptrFromInt(origin.Three.content[1]); 
-                        remain = try allocOne(remain, use_first, &new_three0); 
-                        if (nxt_three.Three.content[2] == 0) {
-                            new_three0.Three.content[0] = f; 
-                            new_three0.Three.content[1] = nxt_three.Three.content[0]; 
-                            new_three0.Three.content[2] = nxt_three.Three.content[1]; 
-                            threeSizeUpdateDirectly(new_three0, depth - 1); 
-                            if (origin.Three.content[2] == 0) {
-                                fail_check.* = @intFromPtr(new_three0); 
-                                return remain; 
-                            }
-                            e.Three.content[0] = @intFromPtr(new_three0); 
-                            e.Three.content[1] = origin.Three.content[2]; 
-                            e.Three.content[2] = 0; 
-                            threeSizeUpdateDirectly(e, depth); 
-                        } else {
-                            remain = try allocOne(remain, use_first, &new_three1); 
-                            new_three0.Three.content[0] = f; 
-                            new_three0.Three.content[1] = nxt_three.Three.content[0]; 
-                            new_three0.Three.content[2] = 0; 
-                            threeSizeUpdateDirectly(new_three0, depth - 1); 
-                            new_three1.Three.content[0] = nxt_three.Three.content[1]; 
-                            new_three1.Three.content[1] = nxt_three.Three.content[2]; 
-                            new_three1.Three.content[2] = 0; 
-                            threeSizeUpdateDirectly(new_three1, depth - 1); 
-                            e.Three.content[0] = @intFromPtr(new_three0); 
-                            e.Three.content[1] = @intFromPtr(new_three1); 
-                            e.Three.content[2] = origin.Three.content[2]; 
-                            threeSizeUpdateDirectly(e, depth); 
-                        }
-                    } else {
-                        const prev_three: *Element = @ptrFromInt(origin.Three.content[the_idx - 1]); 
-                        remain = try allocOne(remain, use_first, &new_three0); 
-                        if (prev_three.Three.content[2] == 0) {
-                            new_three0.Three.content[0] = prev_three.Three.content[0]; 
-                            new_three0.Three.content[1] = prev_three.Three.content[1]; 
-                            new_three0.Three.content[2] = f; 
-                            threeSizeUpdateDirectly(new_three0, depth - 1); 
-                            if (origin.Three.content[2] == 0) {
-                                fail_check.* = @intFromPtr(new_three0); 
-                                return remain; 
-                            }
-                            @memcpy(e.Three.content[0..the_idx-1], origin.Three.content[0..the_idx-1]); 
-                            e.Three.content[the_idx-1] = @intFromPtr(new_three0); 
-                            @memcpy(e.Three.content[the_idx..2], origin.Three.content[the_idx+1..]); 
-                            e.Three.content[2] = 0; 
-                            threeSizeUpdateDirectly(e, depth); 
-                        } else {
-                            remain = try allocOne(remain, use_first, &new_three1); 
-                            new_three0.Three.content[0] = prev_three.Three.content[0]; 
-                            new_three0.Three.content[1] = prev_three.Three.content[1]; 
-                            new_three0.Three.content[2] = 0; 
-                            threeSizeUpdateDirectly(new_three0, depth - 1); 
-                            new_three1.Three.content[0] = prev_three.Three.content[2]; 
-                            new_three1.Three.content[1] = f; 
-                            new_three1.Three.content[2] = 0; 
-                            threeSizeUpdateDirectly(new_three1, depth - 1); 
-                            if (the_idx == 1) {
-                                e.Three.content[0] = @intFromPtr(new_three0); 
-                                e.Three.content[1] = @intFromPtr(new_three1); 
-                                e.Three.content[2] = origin.Three.content[2]; 
-                            } else if (the_idx == 2) {
-                                e.Three.content[0] = origin.Three.content[0]; 
-                                e.Three.content[1] = @intFromPtr(new_three0); 
-                                e.Three.content[2] = @intFromPtr(new_three1); 
-                            } else {
-                                unreachable; 
-                            }
-                            threeSizeUpdateDirectly(e, depth); 
-                        }
-                    }
-                } else {
-                    var new_three: *Element = undefined; 
-                    remain = try allocOne(remain, use_first, &new_three); 
-                    new_three.* = buf; 
-                    e.* = origin; 
-                    e.Three.content[the_idx] = @intFromPtr(new_three); 
-                    threeSizeUpdateDirectly(e, depth); 
-                }
-                break; 
-            }
-        } 
-    } 
-    fail_check.* = null; 
+        @memcpy(e.Three.content[0..3], rst_as_four.Four[0..3]); 
+        threeSizeUpdateDirectly(e, depth); 
+    }
     return remain; 
+    // if (depth == 0) {
+    //     if (origin.Three.content[2] == 0) {
+    //         if (index == 0) {
+    //             pop_rst.* = origin.Three.content[0]; 
+    //             fail_check.* = origin.Three.content[1]; 
+    //         } else if (index == 1) {
+    //             pop_rst.* = origin.Three.content[1]; 
+    //             fail_check.* = origin.Three.content[0]; 
+    //         } else unreachable; 
+    //         return remain; 
+    //     } else {
+    //         pop_rst.* = origin.Three.content[index]; 
+    //         @memcpy(e.Three.content[0..index], origin.Three.content[0..index]); 
+    //         @memcpy(e.Three.content[index..2], origin.Three.content[index+1..]); 
+    //         e.Three.content[2] = 0; 
+    //         threeSizeUpdateDirectly(e, depth); 
+    //         fail_check.* = null; 
+    //         return remain; 
+    //     } 
+    // } 
+    // var cum = index; 
+    // var the_idx0: ?usize = null; 
+    // for (origin.Three.content, 0..) |c, th| {
+    //     if (c == 0) break; 
+    //     const p: *Element = @ptrFromInt(c); 
+    //     if (cum >= p.Three.size) {
+    //         cum -= p.Three.size; 
+    //     } else {
+    //         the_idx0 = th; 
+    //         break; 
+    //     } 
+    // } 
+    // const the_idx = the_idx0.?; 
+    // const p: *Element = @ptrFromInt(origin.Three.content[the_idx]); 
+    // var buf: Element = undefined; 
+    // var fail: ?usize = undefined; 
+    // remain = try threeInnerPop(&buf, remain, use_first, p.*, cum, depth - 1, pop_rst, &fail); 
+    // if (fail == null) {
+    //     var new_three: *Element = undefined; 
+    //     remain = try allocOne(remain, use_first, &new_three); 
+    //     new_three.* = buf; 
+    //     @memcpy(e.Three.content[0..], origin.Three.content[0..]); 
+    //     e.Three.content[the_idx] = @intFromPtr(new_three); 
+    //     threeSizeUpdateDirectly(e, depth); 
+    //     fail_check = null; 
+    //     return remain; 
+    // }
+    // const f = fail.?; 
+    // std.debug.assert(f != 0); 
+    // var new_three0: *Element = undefined; 
+    // var new_three1: *Element = undefined; 
+    // if (the_idx == 0) { 
+    //     const nxt_three: *Element = @ptrFromInt(origin.Three.content[1]); 
+    //     remain = try allocOne(remain, use_first, &new_three0); 
+    //     if (nxt_three.Three.content[2] == 0) {
+    //         new_three0.Three.content[0] = f; 
+    //         new_three0.Three.content[1] = nxt_three.Three.content[0]; 
+    //         new_three0.Three.content[2] = nxt_three.Three.content[1]; 
+    //         threeSizeUpdateDirectly(new_three0, depth - 1); 
+    //         if (origin.Three.content[2] == 0) {
+    //             fail_check.* = @intFromPtr(new_three0); 
+    //             return remain; 
+    //         }
+    //         e.Three.content[0] = @intFromPtr(new_three0); 
+    //         e.Three.content[1] = origin.Three.content[2]; 
+    //         e.Three.content[2] = 0; 
+    //         threeSizeUpdateDirectly(e, depth); 
+    //     } else {
+    //         remain = try allocOne(remain, use_first, &new_three1); 
+    //         new_three0.Three.content[0] = f; 
+    //         new_three0.Three.content[1] = nxt_three.Three.content[0]; 
+    //         new_three0.Three.content[2] = 0; 
+    //         threeSizeUpdateDirectly(new_three0, depth - 1); 
+    //         new_three1.Three.content[0] = nxt_three.Three.content[1]; 
+    //         new_three1.Three.content[1] = nxt_three.Three.content[2]; 
+    //         new_three1.Three.content[2] = 0; 
+    //         threeSizeUpdateDirectly(new_three1, depth - 1); 
+    //         e.Three.content[0] = @intFromPtr(new_three0); 
+    //         e.Three.content[1] = @intFromPtr(new_three1); 
+    //         e.Three.content[2] = origin.Three.content[2]; 
+    //         threeSizeUpdateDirectly(e, depth); 
+    //     }
+    // } else {
+    //     const prev_three: *Element = @ptrFromInt(origin.Three.content[the_idx - 1]); 
+    //     remain = try allocOne(remain, use_first, &new_three0); 
+    //     if (prev_three.Three.content[2] == 0) {
+    //         new_three0.Three.content[0] = prev_three.Three.content[0]; 
+    //         new_three0.Three.content[1] = prev_three.Three.content[1]; 
+    //         new_three0.Three.content[2] = f; 
+    //         threeSizeUpdateDirectly(new_three0, depth - 1); 
+    //         if (origin.Three.content[2] == 0) {
+    //             fail_check.* = @intFromPtr(new_three0); 
+    //             return remain; 
+    //         }
+    //         @memcpy(e.Three.content[0..the_idx-1], origin.Three.content[0..the_idx-1]); 
+    //         e.Three.content[the_idx-1] = @intFromPtr(new_three0); 
+    //         @memcpy(e.Three.content[the_idx..2], origin.Three.content[the_idx+1..]); 
+    //         e.Three.content[2] = 0; 
+    //         threeSizeUpdateDirectly(e, depth); 
+    //     } else {
+    //         remain = try allocOne(remain, use_first, &new_three1); 
+    //         new_three0.Three.content[0] = prev_three.Three.content[0]; 
+    //         new_three0.Three.content[1] = prev_three.Three.content[1]; 
+    //         new_three0.Three.content[2] = 0; 
+    //         threeSizeUpdateDirectly(new_three0, depth - 1); 
+    //         new_three1.Three.content[0] = prev_three.Three.content[2]; 
+    //         new_three1.Three.content[1] = f; 
+    //         new_three1.Three.content[2] = 0; 
+    //         threeSizeUpdateDirectly(new_three1, depth - 1); 
+    //         if (the_idx == 1) {
+    //             e.Three.content[0] = @intFromPtr(new_three0); 
+    //             e.Three.content[1] = @intFromPtr(new_three1); 
+    //             e.Three.content[2] = origin.Three.content[2]; 
+    //         } else if (the_idx == 2) {
+    //             e.Three.content[0] = origin.Three.content[0]; 
+    //             e.Three.content[1] = @intFromPtr(new_three0); 
+    //             e.Three.content[2] = @intFromPtr(new_three1); 
+    //         } else {
+    //             unreachable; 
+    //         }
+    //         threeSizeUpdateDirectly(e, depth); 
+    //     }
+    // }
+    // fail_check.* = null; 
+    // return remain; 
 }
 
 pub fn fourInnerPop(e: *Element, buffer: []Element, use_first: bool, origin: Element, index: usize, depth: usize, pop_rst: *usize, fail_check: *?usize) ![]Element {
@@ -759,8 +778,7 @@ pub fn fourInnerPop(e: *Element, buffer: []Element, use_first: bool, origin: Ele
     if (idx == 3 or (origin.Four[idx+1] == 0)) {
         const lthree: *Element = @ptrFromInt(origin.Four[idx-1]); 
         var buf: ?*Element = undefined; 
-        // ?????? incorrectly push method 
-        remain = try threeInnerPush(new_three0, &buf, remain, use_first, lthree.*, 0, f, depth - 1); 
+        remain = try threePush(new_three0, &buf, remain, use_first, lthree.*, f, depth - 1, true); 
         @memcpy(e.Four[0..idx-1], origin.Four[0..idx-1]); 
         if (buf) |b| {
             e.Four[idx-1] = @intFromPtr(new_three0);
@@ -772,10 +790,9 @@ pub fn fourInnerPop(e: *Element, buffer: []Element, use_first: bool, origin: Ele
             e.Four[3] = 0; 
         }
     } else {
-        // push left with (idx+1)
         const rthree: *Element = @ptrFromInt(origin.Four[idx+1]); 
         var buf: ?*Element = undefined; 
-        remain = try threeInnerPush(new_three0, &buf, remain, use_first, rthree.*, 0, f, depth - 1); 
+        remain = try threePush(new_three0, &buf, remain, use_first, rthree.*, f, depth - 1, false); 
         @memcpy(e.Four[0..idx], origin.Four[0..idx]); 
         if (buf) |b| {
             e.Four[idx] = @intFromPtr(new_three0);
