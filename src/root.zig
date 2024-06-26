@@ -27,104 +27,16 @@ pub const EMPTY = init.EMPTY;
 pub const single = initSingle; 
 pub const initSingle = init.initSingle; 
 
+const alloc = @import("alloc.zig"); 
+pub const allocSingle = alloc.allocOne; 
+pub const allocOne = alloc.allocOne; 
 
-pub fn pop(e: *Element, buffer: []Element, use_first: bool, origin: Element, depth: usize, right: bool, pop_rst: *usize) ![]Element {
-    if (origin.FingerTree.t == Element.EmptyT) {
-        unreachable; 
-    }
-    if (origin.FingerTree.t == Element.SingleT) {
-        e.* = EMPTY; 
-        pop_rst.* = origin.FingerTree.ptr; 
-        return buffer; 
-    }
-    var remain: []Element = buffer; 
-    std.debug.assert(origin.FingerTree.t == Element.DeepT); 
-    const deep: *Element = @ptrFromInt(origin.FingerTree.ptr); 
-    const rright: *Element = @ptrFromInt(if (right) deep.Deep.right else deep.Deep.left); 
-    const right_len = fourLength(rright.*); 
-    if (right_len == 1) {
-        const deep_fingertree: *Element = @ptrFromInt(deep.Deep.finger_tree); 
-        // pop it to handle this problem ~ 
-        if (deep_fingertree.FingerTree.t == Element.EmptyT) {
-            // .. ignore it, and handle with left branch 
-            const left: *Element = @ptrFromInt(if (right) deep.Deep.left else deep.Deep.right); 
-            const left_len = fourLength(left.*);
-            if (left_len == 1) {
-                single(e, left.Four[0], depth); 
-                pop_rst.* = rright.Four[0]; 
-            } else {
-                var new_left: *Element = undefined; 
-                var new_right: *Element = undefined; 
-                var new_deep: *Element = undefined; 
-                remain = try allocSingle(remain, use_first, &new_left); 
-                remain = try allocSingle(remain, use_first, &new_right); 
-                remain = try allocSingle(remain, use_first, &new_deep); 
-                pop_rst.* = rright.Four[0]; 
-                new_right.Four[0] = left.Four[0]; 
-                new_right.Four[1] = 0; 
-                @memcpy(new_left.Four[0..left_len - 1], left.Four[1..left_len]); 
-                new_left.Four[left_len - 1] = 0; 
-                new_deep.Deep.left = @intFromPtr(if (right) new_left else new_right ); 
-                new_deep.Deep.right = @intFromPtr(if (!right) new_left else new_right ); 
-                new_deep.Deep.finger_tree = deep.Deep.finger_tree; 
-                e.FingerTree.t = Element.DeepT; 
-                e.FingerTree.ptr = @intFromPtr(new_deep); 
-                e.FingerTree.size = deepGetSize(new_deep, depth); 
-            }
-        } else {
-            var new_deep_fingertree: *Element = undefined; 
-            remain = try allocSingle(remain, use_first, &new_deep_fingertree); 
-            // pop it 
-            var rst: usize = undefined; 
-            remain = try pop(new_deep_fingertree, remain, use_first, deep_fingertree.*, depth + 1, right, &rst); 
-            var new_rfour: *Element = undefined; 
-            var new_deep: *Element = undefined; 
-            remain = try allocSingle(remain, use_first, &new_rfour); 
-            remain = try allocSingle(remain, use_first, &new_deep); 
-            pop_rst.* = rright.Four[0]; 
-            // handle it with new four ~ 
-            var new_rfour_idx: usize = 0; 
-            const pop_three: *Element = @ptrFromInt(rst); 
-            for (pop_three.Three.content) |c| {
-                if (c == 0) {
-                    break; 
-                }
-                new_rfour.Four[new_rfour_idx] = c; 
-                new_rfour_idx += 1; 
-            }
-            new_rfour.Four[new_rfour_idx] = 0; 
-            new_deep.* = deep.*; 
-            new_deep.Deep.finger_tree = @intFromPtr(new_deep_fingertree); 
-            (if (right) 
-                new_deep.Deep.right 
-            else 
-                new_deep.Deep.left)
-                    = @intFromPtr(new_rfour); 
-            e.FingerTree.t = Element.DeepT; 
-            e.FingerTree.ptr = @intFromPtr(new_deep); 
-            e.FingerTree.size = deepGetSize(new_deep, depth); 
-        }
-    } else {
-        // just remove it directly 
-        var new_rright: *Element = undefined; 
-        var new_deep: *Element= undefined; 
-        remain = try allocSingle(remain, use_first, &new_rright); 
-        remain = try allocSingle(remain, use_first, &new_deep); 
-        pop_rst.* = rright.Four[right_len - 1]; 
-        new_rright.* = rright.*; 
-        new_rright.Four[right_len - 1] = 0; 
-        new_deep.* = deep.*; 
-        (if (right) 
-            new_deep.Deep.right 
-        else 
-            new_deep.Deep.left)
-                = @intFromPtr(new_rright); 
-        e.FingerTree.ptr = @intFromPtr(new_deep); 
-        e.FingerTree.t = Element.DeepT; 
-        e.FingerTree.size = deepGetSize(new_deep, depth); 
-    }
-    return remain; 
-}
+const size_calc = @import("size_calc.zig"); 
+pub const maybeThreeGetSize = size_calc.maybeThreeGetSize; 
+pub const fourLength = size_calc.fourLength; 
+
+const poplib = @import("pop.zig"); 
+pub const pop = poplib.pop; 
 
 pub fn merge(e: *Element, buffer: []Element, use_first: bool, left: Element, right: Element, depth: usize) ![]Element {
     // Handle empty situation 
@@ -322,15 +234,6 @@ pub fn createDeep(e: *Element, buffer: []Element, use_first: bool) ![]Element {
     }; 
     return remain; 
 }
-
-
-const alloc = @import("alloc.zig"); 
-pub const allocSingle = alloc.allocOne; 
-pub const allocOne = alloc.allocOne; 
-
-pub const size_calc = @import("size_calc.zig"); 
-pub const maybeThreeGetSize = size_calc.maybeThreeGetSize; 
-pub const fourLength = size_calc.fourLength; 
 
 pub fn deepGetSize(deep: *Element, depth: usize) usize {
     const left: *Element = @ptrFromInt(deep.Deep.left); 
