@@ -1,10 +1,14 @@
 const std = @import("std");
+const Allocator = std.mem.Allocator; 
 
 const lib = @import("root.zig");
 
 pub fn main() !void {
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     defer _ = gpa.deinit();
+    if (true) {
+        // return justPush12Elements(gpa.allocator()); 
+    }
     const allocator = gpa.allocator();
     const buffer: []lib.Element = try allocator.alloc(lib.Element, 102400);
     defer allocator.free(buffer);
@@ -23,7 +27,33 @@ pub fn main() !void {
         if (rst != i + 2) {
             std.log.err("rst: {}; i: {}", .{ rst, i });
         } else {
-            std.log.debug("rst: {}; i: {}", .{ rst, i }); 
+        //     std.log.debug("rst: {}; i: {}", .{ rst, i }); 
+        }
+    }
+}
+
+test "push 12 elements" {
+    try justPush12Elements(std.testing.allocator); 
+}
+
+fn justPush12Elements(allocator: Allocator) !void {
+    const buffer = try allocator.alloc(lib.Element, 1024);  
+    defer allocator.free(buffer); 
+    var ft: lib.Element = lib.EMPTY; 
+    var remain: []lib.Element = buffer; 
+    for (0..12) |i| {
+        remain = try lib.push(&ft, remain, true, ft, i + 1, 0, true); 
+        for (0..i+1) |inner| {
+            const v = lib.get(ft, inner, 0); 
+            if (v != inner + 1) {
+                std.log.err("round [{}], [{}] = {} but expect {}", 
+                    .{ i, inner, v, inner + 1 }); 
+                const d: *lib.Element = @ptrFromInt(ft.FingerTree.ptr); 
+                const l: *lib.Element = @ptrFromInt(d.Deep.left); 
+                const r: *lib.Element = @ptrFromInt(d.Deep.right); 
+                std.log.err("|left : {any}", .{ l.Four }); 
+                std.log.err("|right: {any}", .{ r.Four }); 
+            }
         }
     }
 }
