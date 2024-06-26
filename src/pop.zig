@@ -231,9 +231,8 @@ pub fn innerPop(e: *Element, buffer: []Element, use_first: bool, origin: Element
                 new_left.Four[1] = @intFromPtr(new_lthree); 
                 new_left.Four[2] = 0; 
             } else {
-                new_left.Four[0] = @intFromPtr(lt); 
-                new_left.Four[1] = @intFromPtr(new_lthree); 
-                new_left.Four[2] = 0; 
+                new_left.Four[0] = @intFromPtr(new_lthree); 
+                new_left.Four[1] = 0; 
             }
             @memcpy(new_right.Four[0..3], right.Four[1..4]); 
             new_right.Four[3] = 0; 
@@ -343,7 +342,6 @@ pub fn innerPop(e: *Element, buffer: []Element, use_first: bool, origin: Element
             fail_check.* = null; 
             return remain; 
         }
-        // ... 
         std.debug.assert(llen == 4 and rlen == 4); 
         var new_three: *Element = undefined; 
         var new_single: *Element = undefined; 

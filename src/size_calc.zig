@@ -44,3 +44,18 @@ pub fn threeSizeUpdateDirectly(e: *Element, depth: usize) void {
     e.Three.size = size; 
 }
 
+pub fn deepGetSize(deep: Element, depth: usize) usize {
+    const left: *Element = @ptrFromInt(deep.Deep.left); 
+    const right: *Element = @ptrFromInt(deep.Deep.right); 
+    const inner: *Element = @ptrFromInt(deep.Deep.finger_tree); 
+    var s: usize = inner.FingerTree.size; 
+    for (left.Four) |f| {
+        if (f == 0) break; 
+        s += maybeThreeGetSize(f, depth); 
+    }
+    for (right.Four) |f| {
+        if (f == 0) break; 
+        s += maybeThreeGetSize(f, depth); 
+    }
+    return s; 
+}
