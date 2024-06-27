@@ -10,7 +10,6 @@ const fourLength = lib.fourLength;
 const maybeThreeGetSize = lib.maybeThreeGetSize;
 
 pub fn modify(e: *Element, buffer: []Element, use_first: bool, origin: Element, idx: usize, value: usize, depth: usize) ![]Element {
-    std.log.debug("modify idx({}) in ft({})", .{ idx, origin.FingerTree.size });
     std.debug.assert(idx < origin.FingerTree.size);
     var remain = buffer;
     if (origin.FingerTree.t == Element.SingleT) {
@@ -39,7 +38,6 @@ pub fn modify(e: *Element, buffer: []Element, use_first: bool, origin: Element, 
     var new_deep: *Element = undefined;
     remain = try allocOne(remain, use_first, &new_deep);
     if (idx < left_size) {
-        std.log.debug("left modify idx({}) in lfour ({})", .{ idx, left_size });
         var new_four: *Element = undefined;
         remain = try allocOne(remain, use_first, &new_four);
         var fourr: Element = left.*;
@@ -69,7 +67,6 @@ pub fn modify(e: *Element, buffer: []Element, use_first: bool, origin: Element, 
         return remain;
     }
     const r = idx - left_size - inner_size;
-    std.log.debug("right modify idx({}) in rfour ({})", .{ r, fourSize(right.*, depth) });
     var new_four: *Element = undefined;
     remain = try allocOne(remain, use_first, &new_four);
     remain = try fourModify(new_four, remain, use_first, right.*, r, value, depth);
@@ -83,12 +80,10 @@ pub fn modify(e: *Element, buffer: []Element, use_first: bool, origin: Element, 
 }
 
 pub fn threeModify(e: *Element, buffer: []Element, use_first: bool, origin: Element, idx: usize, value: usize, depth: usize) ![]Element {
-    std.log.debug("three modify ({}) in ({})", .{ idx, origin.Three.size });
     std.debug.assert(idx < origin.Three.size);
     if (depth == 0) {
         e.Three = origin.Three;
         e.Three.content[idx] = value;
-        std.log.debug("change {any} -> {any} (actually)", .{ origin.Three.content, e.Three.content });
         return buffer;
     }
     var remain = buffer;
@@ -126,7 +121,6 @@ pub fn fourModify(e: *Element, buffer: []Element, use_first: bool, origin: Eleme
         if (f == 0) break;
         const lc = maybeThreeGetSize(f, depth);
         if (cumul >= lc) {
-            std.log.debug("four modify, skip node {x}({})", .{ f, lc });
             cumul -= lc;
         } else {
             idx0 = i;

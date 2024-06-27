@@ -27,7 +27,6 @@ pub fn get(e: Element, idx: usize, depth: usize) usize {
         const llen = fourLength(l.*);
         var four: Element = l.*;
         std.mem.reverse(usize, four.Four[0..llen]);
-        std.log.debug("before left, rem: {}", .{ rem }); 
         for (four.Four, 0..) |lf, i| {
             if (lf == 0) break;
             const lfc = maybeThreeGetSize(lf, depth);
@@ -38,7 +37,6 @@ pub fn get(e: Element, idx: usize, depth: usize) usize {
                 break; 
             }
         }
-        std.log.debug("after left, rem: {}", .{ rem }); 
         if (idx0) |idx1| {
             if (depth == 0) {
                 return four.Four[idx1];
@@ -54,11 +52,9 @@ pub fn get(e: Element, idx: usize, depth: usize) usize {
         rem -= inner.FingerTree.size;
         const r: *Element = @ptrFromInt(d.Deep.right);
         var idx2: ?usize = null;
-        std.log.debug("before right, rem: {}", .{ rem }); 
         for (r.Four, 0..) |rf, i| {
             if (rf == 0) break;
             const rfc = maybeThreeGetSize(rf, depth);
-            std.log.debug("right .. rfc = {}", .{ rfc }); 
             if (rem >= rfc) {
                 rem -= rfc;
             } else {
@@ -67,7 +63,6 @@ pub fn get(e: Element, idx: usize, depth: usize) usize {
             }
         }
         const idx3 = idx2.?;
-        std.log.debug("right, select idx {}, value {}", .{ idx3, r.Four[idx3] }); 
         if (depth == 0) {
             return r.Four[idx3];
         } else {
